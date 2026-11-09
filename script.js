@@ -1814,6 +1814,39 @@ function backToQuizModeSelect() {
 }
 
 // ================= 世代・地方別設定 & 判定ロジック =================
+let genQuizDifficulty = 'normal'; // 'normal' | 'hard'
+
+function setGenQuizDifficulty(diff) {
+    genQuizDifficulty = diff;
+    const btnNormal = document.getElementById('gen-diff-btn-normal');
+    const btnHard = document.getElementById('gen-diff-btn-hard');
+    const desc = document.getElementById('gen-diff-desc');
+
+    if (diff === 'normal') {
+        if (btnNormal) {
+            btnNormal.className = 'px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 bg-white text-emerald-600 shadow-xs cursor-pointer';
+        }
+        if (btnHard) {
+            btnHard.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer';
+        }
+        if (desc) {
+            desc.textContent = '選択中：ノーマル（主要・最終進化形）';
+            desc.className = 'text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md';
+        }
+    } else {
+        if (btnNormal) {
+            btnNormal.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer';
+        }
+        if (btnHard) {
+            btnHard.className = 'px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 bg-white text-rose-600 shadow-xs cursor-pointer';
+        }
+        if (desc) {
+            desc.textContent = '選択中：ハード（進化前含む全ポケモン）';
+            desc.className = 'text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md';
+        }
+    }
+}
+
 const GENERATION_CONFIG = {
     1: { id: 1, name: '第1世代', region: 'カントー', minId: 1, maxId: 151, label: '第1世代 (カントー)' },
     2: { id: 2, name: '第2世代', region: 'ジョウト', minId: 152, maxId: 251, label: '第2世代 (ジョウト)' },
@@ -1887,11 +1920,36 @@ function startQuiz(mode) {
         if (candidates.length === 0) candidates = pokemonList;
         document.getElementById('quiz-badge-mode').textContent = 'ノーマル';
     } else if (mode.startsWith('gen-')) {
-        const genNum = parseInt(mode.replace('gen-', ''), 10);
+        const parts = mode.split('-');
+        const genNum = parseInt(parts[1], 10);
+        // 'gen-1-normal', 'gen-1-hard', または 'gen-1' (選択中のトグル難易度を採用)
+        const diff = (parts.length >= 3 && (parts[2] === 'normal' || parts[2] === 'hard'))
+            ? parts[2]
+            : genQuizDifficulty;
+
         const genInfo = GENERATION_CONFIG[genNum];
-        candidates = pokemonList.filter(p => getPokemonGeneration(p) === genNum);
-        if (candidates.length === 0) candidates = pokemonList;
-        document.getElementById('quiz-badge-mode').textContent = genInfo ? `${genInfo.name} (${genInfo.region})` : `第${genNum}世代`;
+        const allGenList = pokemonList.filter(p => getPokemonGeneration(p) === genNum);
+
+        if (diff === 'normal') {
+            // ノーマル：メガシンカ、単一形態・最終進化形・高種族値（450以上）の主要ポケモン
+            candidates = allGenList.filter(p => {
+                if (p.formType === 'mega') return true;
+                if (p.total >= 450) return true;
+                return false;
+            });
+            if (candidates.length < 10) {
+                candidates = allGenList.filter(p => p.total >= 400);
+            }
+            if (candidates.length === 0) candidates = allGenList;
+            const genName = genInfo ? `${genInfo.name} (${genInfo.region})` : `第${genNum}世代`;
+            document.getElementById('quiz-badge-mode').textContent = `${genName} ★ノーマル`;
+        } else {
+            // ハード：進化前を含むその世代の全ポケモン
+            candidates = allGenList;
+            if (candidates.length === 0) candidates = pokemonList;
+            const genName = genInfo ? `${genInfo.name} (${genInfo.region})` : `第${genNum}世代`;
+            document.getElementById('quiz-badge-mode').textContent = `${genName} 🔥ハード`;
+        }
     } else {
         candidates = [...pokemonList];
         document.getElementById('quiz-badge-mode').textContent = 'ハード';
