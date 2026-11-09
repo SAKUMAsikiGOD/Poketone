@@ -55,44 +55,91 @@ const VALID_MEGA_BASE_IDS = new Set([
     780  // メガジジーロン (Pokémon LEGENDS Z-A / PokeAPI)
 ]);
 
+// 全ポケモンの公式アートワーク画像を100%確実に生成・補完する関数
+function getPokemonImageUrl(p) {
+    if (!p) return POKEBALL_FALLBACK_SVG;
+
+    // 既に有効な外部画像URLがある場合はそれを使用（ただしモンスターボールSVGや空文字を除く）
+    if (p.image && typeof p.image === 'string' && p.image.startsWith('http') && !p.image.includes('data:image')) {
+        return p.image;
+    }
+
+    const id = p.id;
+    const baseId = p.baseId || p.id;
+
+    // 特殊フォルム（ID 10001〜）の場合、まずは自身のアートワークURL
+    if (id > 1025) {
+        return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + id + '.png';
+    }
+
+    // 通常種（1〜1025）は全国図鑑番号の公式アートワーク
+    if (baseId > 0 && baseId <= 1025) {
+        return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + baseId + '.png';
+    }
+
+    return POKEBALL_FALLBACK_SVG;
+}
+window.getPokemonImageUrl = getPokemonImageUrl;
+
 // 画像ロードエラー時の安全な多段階フォールバック処理（特殊フォルム破損時は通常種アートワークへ、ダメならドット絵、最後にモンスターボールへ）
-window.handlePokemonImageError = function (imgEl, baseId) {
+window.handlePokemonImageError = function (imgEl, pokemonId, baseId) {
     if (!imgEl) return;
 
     let step = parseInt(imgEl.dataset.fallbackStep || '0', 10);
-    const safeBaseId = parseInt(baseId, 10);
+    const id = parseInt(pokemonId, 10) || 0;
+    const base = parseInt(baseId || pokemonId, 10) || 0;
     const currentSrc = imgEl.currentSrc || imgEl.src || '';
 
-    // ステップ1: 通常種(baseId)の公式アートワークを試す
-    if (step === 0 && safeBaseId > 0 && safeBaseId <= 1025) {
+    // ステップ1: 特殊フォルムでエラーが出た場合、通常種(base)の公式アートワークを試す
+    if (step === 0) {
         imgEl.dataset.fallbackStep = '1';
-        const baseArtworkUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + safeBaseId + '.png';
-        if (currentSrc !== baseArtworkUrl) {
-            imgEl.onerror = function () {
-                window.handlePokemonImageError(this, safeBaseId);
-            };
-            imgEl.src = baseArtworkUrl;
-            return;
+        if (base > 0 && base <= 1025) {
+            const baseArtworkUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + base + '.png';
+            if (!currentSrc.includes('/official-artwork/' + base + '.png')) {
+                imgEl.onerror = function () {
+                    window.handlePokemonImageError(this, id, base);
+                };
+                imgEl.src = baseArtworkUrl;
+                return;
+            }
         }
         step = 1;
     }
 
-    // ステップ2: 通常種の通常スプライト（ドット絵）を試す
-    if (step <= 1 && safeBaseId > 0 && safeBaseId <= 1025) {
+    // ステップ2: 自身のドット絵スプライトを試す
+    if (step === 1) {
         imgEl.dataset.fallbackStep = '2';
-        const spriteUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + safeBaseId + '.png';
-        if (currentSrc !== spriteUrl) {
-            imgEl.onerror = function () {
-                window.handlePokemonImageError(this, safeBaseId);
-            };
-            imgEl.src = spriteUrl;
-            return;
+        if (id > 0) {
+            const spriteUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + id + '.png';
+            if (!currentSrc.endsWith('/sprites/pokemon/' + id + '.png')) {
+                imgEl.onerror = function () {
+                    window.handlePokemonImageError(this, id, base);
+                };
+                imgEl.src = spriteUrl;
+                return;
+            }
         }
         step = 2;
     }
 
-    // ステップ3: 確実にモンスターボールSVGを表示（無限ループ抑止のため onerror は完全解除）
-    imgEl.dataset.fallbackStep = '3';
+    // ステップ3: 通常種のドット絵スプライトを試す
+    if (step === 2) {
+        imgEl.dataset.fallbackStep = '3';
+        if (base > 0 && base <= 1025) {
+            const baseSpriteUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + base + '.png';
+            if (!currentSrc.endsWith('/sprites/pokemon/' + base + '.png')) {
+                imgEl.onerror = function () {
+                    window.handlePokemonImageError(this, id, base);
+                };
+                imgEl.src = baseSpriteUrl;
+                return;
+            }
+        }
+        step = 3;
+    }
+
+    // ステップ4: 最終手段としてモンスターボールSVGを表示（無限ループ抑止のため onerror は完全解除）
+    imgEl.dataset.fallbackStep = '4';
     imgEl.onerror = null;
     imgEl.src = POKEBALL_FALLBACK_SVG;
 };
@@ -463,8 +510,10 @@ function closeCustomAlert() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 起動直後に即座に内蔵フォールバックデータを適用（0件放置の防止）
-    pokemonList = [...EMBEDDED_FALLBACK_POKEMON].filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId));
+    // 起動直後に即座に内蔵フォールバックデータを適用（0件放置の防止＆画像URL完全補完）
+    pokemonList = [...EMBEDDED_FALLBACK_POKEMON]
+        .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
+        .map(p => { p.image = getPokemonImageUrl(p); return p; });
     updateLoadedCount();
     updateFormCounts();
 
@@ -632,6 +681,10 @@ async function fetchOptimizedPokemonData() {
                         } else if (p.formType === 'normal') {
                             p.name = cleanBase;
                         }
+                        // 画像URLの完全補完（空・無効・モンスターボールなら正しい公式アートワークURLを自動設定）
+                        if (!p.image || typeof p.image !== 'string' || !p.image.startsWith('http') || p.image.includes('data:image')) {
+                            p.image = getPokemonImageUrl(p);
+                        }
                         return p;
                     });
 
@@ -676,8 +729,10 @@ async function fetchOptimizedPokemonData() {
         }
     }
 
-    // 初期状態は内蔵フォールバックを表示
-    pokemonList = [...EMBEDDED_FALLBACK_POKEMON].filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId));
+    // 初期状態は内蔵フォールバックを表示（画像URL完全補完）
+    pokemonList = [...EMBEDDED_FALLBACK_POKEMON]
+        .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
+        .map(p => { p.image = getPokemonImageUrl(p); return p; });
     updateLoadedCount();
     updateFormCounts();
     filterAndRenderPokemon();
@@ -1138,7 +1193,7 @@ function renderNextBatch() {
                     </div>
                 </div>
                 <div class="my-2 flex justify-center">
-                    <img src="${p.image || POKEBALL_FALLBACK_SVG}" alt="${p.name}" width="112" height="112" loading="lazy" decoding="async" class="w-28 h-28 object-contain group-hover:scale-110 transition-transform duration-300" onerror="handlePokemonImageError(this, ${p.baseId || p.id})">
+                    <img src="${getPokemonImageUrl(p)}" alt="${p.name}" width="112" height="112" loading="lazy" decoding="async" class="w-28 h-28 object-contain group-hover:scale-110 transition-transform duration-300" onerror="handlePokemonImageError(this, ${p.id}, ${p.baseId || p.id})">
                 </div>
                 <div class="flex flex-col gap-2">
                     <h3 class="text-sm sm:text-base font-bold text-slate-800 text-center line-clamp-1" title="${p.name}">${p.name}</h3>
@@ -1226,7 +1281,7 @@ function openDetailModal(p) {
         </div>
         <div class="p-6 flex flex-col gap-6">
             <div class="flex flex-col sm:flex-row items-center gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <img src="${p.image || POKEBALL_FALLBACK_SVG}" alt="${p.name}" class="w-36 h-36 object-contain drop-shadow-md" onerror="handlePokemonImageError(this, ${p.baseId || p.id})">
+                <img src="${getPokemonImageUrl(p)}" alt="${p.name}" class="w-36 h-36 object-contain drop-shadow-md" onerror="handlePokemonImageError(this, ${p.id}, ${p.baseId || p.id})">
                 <div class="flex flex-col gap-2.5 w-full">
                     <button onclick="playPokemonCrySafeCurrent()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-volume-high"></i>
@@ -2005,8 +2060,8 @@ function startQuiz(mode) {
 
     const randIdx = Math.floor(Math.random() * candidates.length);
     _secretQuizTarget = candidates[randIdx];
-    if (_secretQuizTarget && !_secretQuizTarget.image) {
-        _secretQuizTarget.image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${_secretQuizTarget.baseId || _secretQuizTarget.id}.png`;
+    if (_secretQuizTarget) {
+        _secretQuizTarget.image = getPokemonImageUrl(_secretQuizTarget);
     }
     _revealedQuizTarget = null;
     quizIsPlaying = true; // セキュリティ監視開始 & window.quizTargetPokemon を不可視化
@@ -2396,7 +2451,7 @@ function renderQuizFormSelectionPanel(matched, forms) {
                 ${isGuessed ? 'disabled' : `onclick="selectQuizPokemonToSubmit(${p.id})"`}
                 class="p-2.5 rounded-2xl border border-slate-200 ${disabledClass} transition-all flex items-center justify-between gap-2.5 text-left w-full group">
                 <div class="flex items-center gap-2.5 min-w-0">
-                    <img src="${p.image || POKEBALL_FALLBACK_SVG}" class="w-11 h-11 object-contain drop-shadow-xs flex-shrink-0" onerror="handlePokemonImageError(this, ${p.baseId || p.id})">
+                    <img src="${getPokemonImageUrl(p)}" class="w-11 h-11 object-contain drop-shadow-xs flex-shrink-0" onerror="handlePokemonImageError(this, ${p.id}, ${p.baseId || p.id})">
                     <div class="min-w-0 flex flex-col gap-1">
                         <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-rose-600 truncate">${p.name}</span>
@@ -2582,7 +2637,7 @@ function renderQuizHistory() {
                         <span class="text-[10px] font-black tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
                             #${quizGuessedList.length - idx} 不正解
                         </span>
-                        <img src="${p.image || POKEBALL_FALLBACK_SVG}" class="w-10 h-10 object-contain drop-shadow-sm" onerror="handlePokemonImageError(this, ${p.baseId || p.id})">
+                        <img src="${getPokemonImageUrl(p)}" class="w-10 h-10 object-contain drop-shadow-sm" onerror="handlePokemonImageError(this, ${p.id}, ${p.baseId || p.id})">
                         <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="text-xs text-slate-400 font-bold">#${displayId}</span>
                             <span class="text-sm font-black text-slate-900">${p.name}</span>
@@ -2709,7 +2764,7 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
     card.innerHTML = `
         <div class="relative mx-auto sm:mx-0 flex-shrink-0">
             <div class="w-32 h-32 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/90 flex items-center justify-center border border-slate-300/80 p-2 shadow-inner">
-                <img src="${p.image || POKEBALL_FALLBACK_SVG}" alt="${p.name}" class="w-28 h-28 object-contain drop-shadow" onerror="handlePokemonImageError(this, ${p.baseId || p.id})">
+                <img src="${getPokemonImageUrl(p)}" alt="${p.name}" class="w-28 h-28 object-contain drop-shadow" onerror="handlePokemonImageError(this, ${p.id}, ${p.baseId || p.id})">
             </div>
         </div>
         <div class="flex flex-col gap-2 flex-grow w-full">
