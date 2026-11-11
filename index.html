@@ -62,12 +62,19 @@
                     </button>
                 </div>
 
-                <div
-                    class="text-xs bg-slate-800 text-slate-300 px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-2"
-                    title="通常種（全国図鑑No.1〜1025）＋メガシンカ・リージョン等の固有種族値フォルム">
-                    <i class="fa-solid fa-database text-red-400"></i>
-                    <span>読込: <strong id="loaded-count" class="text-white">0</strong> / <span
-                            id="total-target-count">1253</span></span>
+                <div class="flex items-center gap-1.5">
+                    <div
+                        class="text-xs bg-slate-800 text-slate-300 px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-2"
+                        title="通常種（全国図鑑No.1〜1025）＋メガシンカ・リージョン等の固有種族値フォルム">
+                        <i class="fa-solid fa-database text-red-400"></i>
+                        <span>読込: <strong id="loaded-count" class="text-white">0</strong> / <span
+                                id="total-target-count">1253</span></span>
+                    </div>
+                    <button type="button" onclick="triggerManualDataSync()"
+                        title="PokeAPIからデータを再取得（キャッシュクリア＆再同期）"
+                        class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all cursor-pointer flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -221,6 +228,12 @@
                     <div class="flex items-center gap-2">
                         <span class="text-slate-500">出題候補数:</span>
                         <strong id="quiz-range-count" class="font-black text-slate-900 bg-white border border-slate-200 px-2.5 py-0.5 rounded-lg shadow-2xs text-sm">-- 匹</strong>
+                        <button type="button" onclick="triggerManualDataSync()"
+                            title="ポケモンデータが足りない・読み込まれない時はここをクリックして再取得"
+                            class="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-white text-slate-600 hover:text-rose-600 border border-slate-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1">
+                            <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+                            <span>再取得</span>
+                        </button>
                     </div>
                 </div>
             </div>
