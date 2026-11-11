@@ -518,6 +518,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFormCounts();
 
     switchAppMode('quiz'); // クイズモードを初期表示（メイン機能）
+    renderQuizGenCards();
+    updateQuizRangeSummary();
     renderTypeFilters();
     initFormFilterEvents();
     fetchOptimizedPokemonData();
@@ -935,6 +937,12 @@ function updateLoadedCount() {
     const hardCountEl = document.getElementById('quiz-hard-count');
     if (hardCountEl && pokemonList.length > 0) {
         hardCountEl.textContent = displayTotal;
+    }
+    if (typeof updateQuizRangeSummary === 'function') {
+        updateQuizRangeSummary();
+    }
+    if (typeof renderQuizGenCards === 'function') {
+        renderQuizGenCards();
     }
 
     const loadingText = document.getElementById('loading-text');
@@ -1868,38 +1876,103 @@ function backToQuizModeSelect() {
     updateQuizCryHintState();
 }
 
-// ================= 世代・地方別設定 & 判定ロジック =================
-let genQuizDifficulty = 'normal'; // 'normal' | 'hard'
+// ================= 世代・地方別設定 & 絞り込みロジック =================
+let quizSelectedDifficulty = 'normal'; // 'normal' | 'hard'
+let quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]); // デフォルト全世代
 
-function setGenQuizDifficulty(diff) {
+// 互換用
+let genQuizDifficulty = 'normal';
+
+// 難易度選択 (ステップ 1)
+function selectQuizDifficulty(diff) {
+    quizSelectedDifficulty = diff;
     genQuizDifficulty = diff;
-    const btnNormal = document.getElementById('gen-diff-btn-normal');
-    const btnHard = document.getElementById('gen-diff-btn-hard');
-    const desc = document.getElementById('gen-diff-desc');
+    const cardNormal = document.getElementById('quiz-diff-card-normal');
+    const cardHard = document.getElementById('quiz-diff-card-hard');
+    const checkNormal = document.getElementById('quiz-diff-check-normal');
+    const checkHard = document.getElementById('quiz-diff-check-hard');
+    const label = document.getElementById('quiz-diff-active-label');
 
     if (diff === 'normal') {
-        if (btnNormal) {
-            btnNormal.className = 'px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 bg-white text-emerald-600 shadow-xs cursor-pointer';
+        if (cardNormal) {
+            cardNormal.className = 'p-5 rounded-2xl bg-emerald-50/40 border-2 border-emerald-500 ring-2 ring-emerald-500/20 transition-all text-left flex flex-col justify-between gap-3 group cursor-pointer shadow-sm hover:shadow-md';
         }
-        if (btnHard) {
-            btnHard.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer';
+        if (cardHard) {
+            cardHard.className = 'p-5 rounded-2xl bg-white border-2 border-slate-200 hover:border-rose-400 transition-all text-left flex flex-col justify-between gap-3 group cursor-pointer shadow-sm hover:shadow-md';
         }
-        if (desc) {
-            desc.textContent = '選択中：ノーマル（主要・最終進化形）';
-            desc.className = 'text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md';
+        if (checkNormal) checkNormal.classList.remove('hidden');
+        if (checkHard) checkHard.classList.add('hidden');
+        if (label) {
+            label.textContent = '選択中：ノーマルモード (主要・最終進化形)';
+            label.className = 'text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full';
         }
     } else {
-        if (btnNormal) {
-            btnNormal.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-500 hover:text-slate-800 cursor-pointer';
+        if (cardNormal) {
+            cardNormal.className = 'p-5 rounded-2xl bg-white border-2 border-slate-200 hover:border-emerald-400 transition-all text-left flex flex-col justify-between gap-3 group cursor-pointer shadow-sm hover:shadow-md';
         }
-        if (btnHard) {
-            btnHard.className = 'px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 bg-white text-rose-600 shadow-xs cursor-pointer';
+        if (cardHard) {
+            cardHard.className = 'p-5 rounded-2xl bg-rose-50/40 border-2 border-rose-500 ring-2 ring-rose-500/20 transition-all text-left flex flex-col justify-between gap-3 group cursor-pointer shadow-sm hover:shadow-md';
         }
-        if (desc) {
-            desc.textContent = '選択中：ハード（進化前含む全ポケモン）';
-            desc.className = 'text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md';
+        if (checkNormal) checkNormal.classList.add('hidden');
+        if (checkHard) checkHard.classList.remove('hidden');
+        if (label) {
+            label.textContent = '選択中：ハードモード (全ポケモン)';
+            label.className = 'text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full';
         }
     }
+
+    renderQuizGenCards();
+    updateQuizRangeSummary();
+}
+
+function setGenQuizDifficulty(diff) {
+    selectQuizDifficulty(diff);
+}
+
+// 世代トグル (ステップ 2)
+function toggleGenFilter(genNum) {
+    if (quizSelectedGens.has(genNum)) {
+        quizSelectedGens.delete(genNum);
+    } else {
+        quizSelectedGens.add(genNum);
+    }
+    renderQuizGenCards();
+    updateQuizRangeSummary();
+}
+
+// 全世代選択
+function selectAllGenFilters() {
+    quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    renderQuizGenCards();
+    updateQuizRangeSummary();
+}
+
+// 全解除
+function clearAllGenFilters() {
+    quizSelectedGens.clear();
+    renderQuizGenCards();
+    updateQuizRangeSummary();
+}
+
+// プリセット
+function selectGenPreset(preset) {
+    if (preset === 'early') {
+        quizSelectedGens = new Set([1, 2, 3]);
+    } else if (preset === 'mid') {
+        quizSelectedGens = new Set([4, 5, 6]);
+    } else if (preset === 'late') {
+        quizSelectedGens = new Set([7, 8, 9]);
+    }
+    renderQuizGenCards();
+    updateQuizRangeSummary();
+}
+
+// 単独世代即開始
+function startSingleGenQuiz(genNum) {
+    quizSelectedGens = new Set([genNum]);
+    renderQuizGenCards();
+    updateQuizRangeSummary();
+    startConfiguredQuiz();
 }
 
 // 進化前のポケモン（さらに進化先が存在するポケモンの全国図鑑No. baseIdリスト）
@@ -1961,15 +2034,27 @@ function isFullyEvolvedPokemon(p) {
 }
 
 const GENERATION_CONFIG = {
-    1: { id: 1, name: '第1世代', region: 'カントー', minId: 1, maxId: 151, label: '第1世代 (カントー)' },
-    2: { id: 2, name: '第2世代', region: 'ジョウト', minId: 152, maxId: 251, label: '第2世代 (ジョウト)' },
-    3: { id: 3, name: '第3世代', region: 'ホウエン', minId: 252, maxId: 386, label: '第3世代 (ホウエン)' },
-    4: { id: 4, name: '第4世代', region: 'シンオウ', minId: 387, maxId: 493, label: '第4世代 (シンオウ)' },
-    5: { id: 5, name: '第5世代', region: 'イッシュ', minId: 494, maxId: 649, label: '第5世代 (イッシュ)' },
-    6: { id: 6, name: '第6世代', region: 'カロス', minId: 650, maxId: 721, label: '第6世代 (カロス)' },
-    7: { id: 7, name: '第7世代', region: 'アローラ', minId: 722, maxId: 809, label: '第7世代 (アローラ)' },
-    8: { id: 8, name: '第8世代', region: 'ガラル/ヒスイ', minId: 810, maxId: 905, label: '第8世代 (ガラル/ヒスイ)' },
-    9: { id: 9, name: '第9世代', region: 'パルデア', minId: 906, maxId: 1025, label: '第9世代 (パルデア)' }
+    1: { id: 1, name: '第1世代', region: 'カントー', minId: 1, maxId: 151, label: '第1世代 (カントー)', sub: '赤・緑・青・ピカチュウ', icon: 'fa-gamepad', color: 'red' },
+    2: { id: 2, name: '第2世代', region: 'ジョウト', minId: 152, maxId: 251, label: '第2世代 (ジョウト)', sub: '金・銀・クリスタル', icon: 'fa-feather-pointed', color: 'amber' },
+    3: { id: 3, name: '第3世代', region: 'ホウエン', minId: 252, maxId: 386, label: '第3世代 (ホウエン)', sub: 'ルビー・サファイア・エメラルド', icon: 'fa-gem', color: 'emerald' },
+    4: { id: 4, name: '第4世代', region: 'シンオウ', minId: 387, maxId: 493, label: '第4世代 (シンオウ)', sub: 'ダイヤモンド・パール・プラチナ', icon: 'fa-ring', color: 'cyan' },
+    5: { id: 5, name: '第5世代', region: 'イッシュ', minId: 494, maxId: 649, label: '第5世代 (イッシュ)', sub: 'ブラック・ホワイト (BW/BW2)', icon: 'fa-yin-yang', color: 'slate' },
+    6: { id: 6, name: '第6世代', region: 'カロス', minId: 650, maxId: 721, label: '第6世代 (カロス)', sub: 'X・Y / 全メガシンカ', icon: 'fa-dna', color: 'blue' },
+    7: { id: 7, name: '第7世代', region: 'アローラ', minId: 722, maxId: 809, label: '第7世代 (アローラ)', sub: 'サン・ムーン / アローラの姿', icon: 'fa-sun', color: 'orange' },
+    8: { id: 8, name: '第8世代', region: 'ガラル/ヒスイ', minId: 810, maxId: 905, label: '第8世代 (ガラル/ヒスイ)', sub: '剣盾・アルセウス / 各地域姿', icon: 'fa-shield-halved', color: 'indigo' },
+    9: { id: 9, name: '第9世代', region: 'パルデア', minId: 906, maxId: 1025, label: '第9世代 (パルデア)', sub: 'スカーレット・バイオレット', icon: 'fa-crown', color: 'violet' }
+};
+
+const GEN_COLOR_THEMES = {
+    red: { border: 'border-red-400', bg: 'bg-red-50/70', badgeBg: 'bg-red-100', badgeText: 'text-red-700', checkBg: 'bg-red-500', iconBg: 'bg-red-100 text-red-600', hoverText: 'group-hover:text-red-700' },
+    amber: { border: 'border-amber-400', bg: 'bg-amber-50/70', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', checkBg: 'bg-amber-500', iconBg: 'bg-amber-100 text-amber-600', hoverText: 'group-hover:text-amber-700' },
+    emerald: { border: 'border-emerald-400', bg: 'bg-emerald-50/70', badgeBg: 'bg-emerald-100', badgeText: 'text-emerald-700', checkBg: 'bg-emerald-500', iconBg: 'bg-emerald-100 text-emerald-600', hoverText: 'group-hover:text-emerald-700' },
+    cyan: { border: 'border-cyan-400', bg: 'bg-cyan-50/70', badgeBg: 'bg-cyan-100', badgeText: 'text-cyan-700', checkBg: 'bg-cyan-500', iconBg: 'bg-cyan-100 text-cyan-600', hoverText: 'group-hover:text-cyan-700' },
+    slate: { border: 'border-slate-500', bg: 'bg-slate-100/90', badgeBg: 'bg-slate-200', badgeText: 'text-slate-800', checkBg: 'bg-slate-700', iconBg: 'bg-slate-800 text-white', hoverText: 'group-hover:text-slate-900' },
+    blue: { border: 'border-blue-400', bg: 'bg-blue-50/70', badgeBg: 'bg-blue-100', badgeText: 'text-blue-700', checkBg: 'bg-blue-500', iconBg: 'bg-blue-100 text-blue-600', hoverText: 'group-hover:text-blue-700' },
+    orange: { border: 'border-orange-400', bg: 'bg-orange-50/70', badgeBg: 'bg-orange-100', badgeText: 'text-orange-700', checkBg: 'bg-orange-500', iconBg: 'bg-orange-100 text-orange-600', hoverText: 'group-hover:text-orange-700' },
+    indigo: { border: 'border-indigo-400', bg: 'bg-indigo-50/70', badgeBg: 'bg-indigo-100', badgeText: 'text-indigo-700', checkBg: 'bg-indigo-500', iconBg: 'bg-indigo-100 text-indigo-600', hoverText: 'group-hover:text-indigo-700' },
+    violet: { border: 'border-violet-400', bg: 'bg-violet-50/70', badgeBg: 'bg-violet-100', badgeText: 'text-violet-700', checkBg: 'bg-violet-500', iconBg: 'bg-violet-100 text-violet-600', hoverText: 'group-hover:text-violet-700' }
 };
 
 // ポケモンの世代を初登場世代基準で判定
@@ -2013,8 +2098,165 @@ function getPokemonGeneration(p) {
     return 9;
 }
 
-function startQuiz(mode) {
-    quizCurrentMode = mode;
+// 絞り込み条件に応じた出題候補ポケモンの取得
+function getFilteredCandidates(difficulty, genSet) {
+    if (!pokemonList || pokemonList.length === 0) return [];
+    if (!genSet || genSet.size === 0) return [];
+
+    let list = pokemonList.filter(p => genSet.has(getPokemonGeneration(p)));
+    if (difficulty === 'normal') {
+        const evolvedList = list.filter(p => isFullyEvolvedPokemon(p));
+        return evolvedList.length > 0 ? evolvedList : list;
+    }
+    return list;
+}
+
+// クイズバッジの表示テキスト生成
+function getQuizBadgeText(difficulty, genSet) {
+    let genText = '';
+    if (!genSet || genSet.size === 0) {
+        genText = '未選択';
+    } else if (genSet.size === 9) {
+        genText = '全世代';
+    } else if (genSet.size === 1) {
+        const g = Array.from(genSet)[0];
+        const info = GENERATION_CONFIG[g];
+        genText = info ? `${info.name} (${info.region})` : `第${g}世代`;
+    } else {
+        const sorted = Array.from(genSet).sort((a, b) => a - b);
+        genText = sorted.map(g => `第${g}世代`).join('・');
+    }
+    const diffText = (difficulty === 'normal') ? '★ノーマル' : '🔥ハード';
+    return `${genText} ${diffText}`;
+}
+
+// 世代選択カードのHTMLレンダリング
+function renderQuizGenCards() {
+    const container = document.getElementById('quiz-gen-cards-container');
+    if (!container) return;
+
+    let html = '';
+    for (let gen = 1; gen <= 9; gen++) {
+        const info = GENERATION_CONFIG[gen];
+        if (!info) continue;
+        const isSelected = quizSelectedGens.has(gen);
+        const theme = GEN_COLOR_THEMES[info.color] || GEN_COLOR_THEMES.red;
+
+        let genCount = 0;
+        if (pokemonList && pokemonList.length > 0) {
+            const genList = pokemonList.filter(p => getPokemonGeneration(p) === gen);
+            if (quizSelectedDifficulty === 'normal') {
+                genCount = genList.filter(p => isFullyEvolvedPokemon(p)).length;
+            } else {
+                genCount = genList.length;
+            }
+        }
+
+        const cardClasses = isSelected
+            ? `p-3 rounded-2xl ${theme.bg} border-2 ${theme.border} ring-1 ring-black/5 transition-all text-left flex items-center justify-between gap-2.5 cursor-pointer shadow-xs hover:shadow-sm hover:-translate-y-0.5 group`
+            : `p-3 rounded-2xl bg-white border border-slate-200 opacity-60 hover:opacity-90 transition-all text-left flex items-center justify-between gap-2.5 cursor-pointer shadow-none hover:shadow-xs hover:-translate-y-0.5 group`;
+
+        const checkIcon = isSelected
+            ? `<div class="w-5 h-5 rounded-md ${theme.checkBg} text-white flex items-center justify-center text-[10px] font-black shadow-xs flex-shrink-0"><i class="fa-solid fa-check"></i></div>`
+            : `<div class="w-5 h-5 rounded-md border-2 border-slate-300 bg-white flex items-center justify-center text-[10px] text-transparent flex-shrink-0 group-hover:border-slate-400"><i class="fa-solid fa-check"></i></div>`;
+
+        html += `
+            <div class="${cardClasses}" onclick="toggleGenFilter(${gen})">
+                <div class="flex items-center gap-2.5 min-w-0 flex-grow">
+                    ${checkIcon}
+                    <div class="w-9 h-9 rounded-xl ${theme.iconBg} flex items-center justify-center text-base flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <i class="fa-solid ${info.icon}"></i>
+                    </div>
+                    <div class="min-w-0 flex-grow">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-xs font-black text-slate-900 ${theme.hoverText} transition-colors truncate">${info.name} ${info.region}</span>
+                            ${genCount > 0 ? `<span class="text-[10px] font-bold px-1.5 py-0.2 rounded ${isSelected ? theme.badgeBg + ' ' + theme.badgeText : 'bg-slate-100 text-slate-500'}">${genCount}匹</span>` : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-400 truncate">${info.sub || ''}</div>
+                    </div>
+                </div>
+                <button type="button" onclick="event.stopPropagation(); startSingleGenQuiz(${gen})"
+                    title="この世代のみですぐ開始"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white/80 active:scale-95 transition-all text-xs flex-shrink-0 cursor-pointer">
+                    <i class="fa-solid fa-bolt"></i>
+                </button>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+// リアルタイム集計バー & 開始ボタンの表示更新
+function updateQuizRangeSummary() {
+    const summaryTextEl = document.getElementById('quiz-range-summary-text');
+    const countEl = document.getElementById('quiz-range-count');
+    const startBtn = document.getElementById('quiz-main-start-btn');
+    const startBtnLabel = document.getElementById('quiz-main-start-btn-label');
+    const warningEl = document.getElementById('quiz-gen-none-warning');
+
+    const candidates = getFilteredCandidates(quizSelectedDifficulty, quizSelectedGens);
+    const count = candidates.length;
+
+    if (countEl) {
+        countEl.textContent = `${count} 匹`;
+    }
+
+    let genText = '';
+    if (!quizSelectedGens || quizSelectedGens.size === 0) {
+        genText = '未選択';
+    } else if (quizSelectedGens.size === 9) {
+        genText = '全世代 (第1〜9世代)';
+    } else if (quizSelectedGens.size === 1) {
+        const g = Array.from(quizSelectedGens)[0];
+        const info = GENERATION_CONFIG[g];
+        genText = info ? `${info.name} (${info.region})` : `第${g}世代`;
+    } else {
+        const sorted = Array.from(quizSelectedGens).sort((a, b) => a - b);
+        genText = sorted.map(g => `第${g}世代`).join('・');
+    }
+
+    const diffText = (quizSelectedDifficulty === 'normal') ? 'ノーマル' : 'ハード';
+
+    if (summaryTextEl) {
+        summaryTextEl.textContent = `${genText} 【${diffText}】`;
+    }
+
+    if (!quizSelectedGens || quizSelectedGens.size === 0 || count === 0) {
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.className = 'w-full py-4 px-6 rounded-2xl bg-slate-300 text-slate-500 font-black text-base sm:text-lg shadow-none cursor-not-allowed transition-all flex items-center justify-center gap-2.5';
+        }
+        if (startBtnLabel) startBtnLabel.textContent = '世代を1つ以上選択してください';
+        if (warningEl) warningEl.classList.remove('hidden');
+    } else {
+        if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.className = 'w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 active:scale-98 text-white font-black text-base sm:text-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5 cursor-pointer';
+        }
+        if (startBtnLabel) startBtnLabel.textContent = `この条件でクイズを開始！（${diffText} / ${count}匹）`;
+        if (warningEl) warningEl.classList.add('hidden');
+    }
+}
+
+// 選択した設定（難易度＋世代絞り込み）でクイズを開始
+function startConfiguredQuiz() {
+    if (!quizSelectedGens || quizSelectedGens.size === 0) {
+        alert('出題する世代を1つ以上選択してください。');
+        return;
+    }
+
+    const candidates = getFilteredCandidates(quizSelectedDifficulty, quizSelectedGens);
+    if (!candidates || candidates.length === 0) {
+        alert('該当するポケモンが見つかりませんでした。別の世代を選択してください。');
+        return;
+    }
+
+    quizCurrentMode = (quizSelectedGens.size === 9)
+        ? quizSelectedDifficulty
+        : (quizSelectedGens.size === 1
+            ? `gen-${Array.from(quizSelectedGens)[0]}-${quizSelectedDifficulty}`
+            : `custom-${quizSelectedDifficulty}`);
+
     quizRemainingAttempts = QUIZ_MAX_ATTEMPTS;
     quizGuessedList = [];
     quizBlurCount = 0;
@@ -2022,40 +2264,9 @@ function startQuiz(mode) {
     const warningModal = document.getElementById('quiz-blur-warning-modal');
     if (warningModal) warningModal.classList.add('hidden');
 
-    // 出題候補の絞り込み
-    let candidates = [];
-    if (mode === 'normal') {
-        // 全世代ノーマル：最終進化形・単一形態・メガシンカのみ（進化前を完全除外）
-        candidates = pokemonList.filter(p => isFullyEvolvedPokemon(p));
-        if (candidates.length === 0) candidates = pokemonList;
-        document.getElementById('quiz-badge-mode').textContent = 'ノーマル';
-    } else if (mode.startsWith('gen-')) {
-        const parts = mode.split('-');
-        const genNum = parseInt(parts[1], 10);
-        // 'gen-1-normal', 'gen-1-hard', または 'gen-1' (選択中のトグル難易度を採用)
-        const diff = (parts.length >= 3 && (parts[2] === 'normal' || parts[2] === 'hard'))
-            ? parts[2]
-            : genQuizDifficulty;
-
-        const genInfo = GENERATION_CONFIG[genNum];
-        const allGenList = pokemonList.filter(p => getPokemonGeneration(p) === genNum);
-
-        if (diff === 'normal') {
-            // 世代別ノーマル：その世代の最終進化形・単一形態・メガシンカのみ（進化前を完全除外）
-            candidates = allGenList.filter(p => isFullyEvolvedPokemon(p));
-            if (candidates.length === 0) candidates = allGenList;
-            const genName = genInfo ? `${genInfo.name} (${genInfo.region})` : `第${genNum}世代`;
-            document.getElementById('quiz-badge-mode').textContent = `${genName} ★ノーマル`;
-        } else {
-            // ハード：進化前を含むその世代の全ポケモン
-            candidates = allGenList;
-            if (candidates.length === 0) candidates = pokemonList;
-            const genName = genInfo ? `${genInfo.name} (${genInfo.region})` : `第${genNum}世代`;
-            document.getElementById('quiz-badge-mode').textContent = `${genName} 🔥ハード`;
-        }
-    } else {
-        candidates = [...pokemonList];
-        document.getElementById('quiz-badge-mode').textContent = 'ハード';
+    const badgeEl = document.getElementById('quiz-badge-mode');
+    if (badgeEl) {
+        badgeEl.textContent = getQuizBadgeText(quizSelectedDifficulty, quizSelectedGens);
     }
 
     const randIdx = Math.floor(Math.random() * candidates.length);
@@ -2088,8 +2299,28 @@ function startQuiz(mode) {
     }, 400);
 }
 
+// 互換用ラッパー
+function startQuiz(mode) {
+    if (mode === 'normal') {
+        quizSelectedDifficulty = 'normal';
+        quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    } else if (mode === 'hard') {
+        quizSelectedDifficulty = 'hard';
+        quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    } else if (typeof mode === 'string' && mode.startsWith('gen-')) {
+        const parts = mode.split('-');
+        const genNum = parseInt(parts[1], 10);
+        quizSelectedGens = new Set([genNum]);
+        if (parts.length >= 3 && (parts[2] === 'normal' || parts[2] === 'hard')) {
+            quizSelectedDifficulty = parts[2];
+        }
+    }
+    selectQuizDifficulty(quizSelectedDifficulty);
+    startConfiguredQuiz();
+}
+
 function restartQuizSameMode() {
-    startQuiz(quizCurrentMode);
+    startConfiguredQuiz();
 }
 
 function renderQuizHearts() {
