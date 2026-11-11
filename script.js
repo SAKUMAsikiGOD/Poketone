@@ -43,15 +43,19 @@ const typeEnToJp = {
 const POKEBALL_FALLBACK_SVG = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23ef4444' stroke='%231e293b' stroke-width='6'/%3E%3Cpath d='M 4 50 A 46 46 0 0 0 96 50 Z' fill='%23ffffff' stroke='%231e293b' stroke-width='6'/%3E%3Cline x1='4' y1='50' x2='96' y2='50' stroke='%231e293b' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='14' fill='%23ffffff' stroke='%231e293b' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%2394a3b8'/%3E%3C/svg%3E";
 window.POKEBALL_FALLBACK_SVG = POKEBALL_FALLBACK_SVG;
 
-// 公式メガシンカ（48種＋ゲンシカイキ2種＋アプリ専用メガメガニウム・メガメガヤンマ）の baseId リスト
+// 公式メガシンカ（48種＋ゲンシカイキ2種＋サトシゲッコウガ＋アプリ専用メガメガニウム・メガメガヤンマ）の baseId リスト
 const VALID_MEGA_BASE_IDS = new Set([
     3, 6, 9, 15, 18, 65, 80, 94, 115, 127, 130, 142, 150,
     154, // メガメガニウム
     181, 208, 212, 214, 229, 248, 254, 257, 260, 282, 302, 303,
     306, 308, 310, 319, 323, 334, 354, 359, 362, 373, 376,
-    380, 381, 382, 383, 384, 428, 448, 460,
+    380, 381, 382, 383, 384, 428,
+    445, // メガガブリアス
+    448, 460,
     469, // メガメガヤンマ
-    475, 531, 719,
+    475, 531,
+    658, // サトシゲッコウガ (メガゲッコウガ)
+    719,
     780  // メガジジーロン (Pokémon LEGENDS Z-A / PokeAPI)
 ]);
 
@@ -157,15 +161,63 @@ const EMBEDDED_FALLBACK_POKEMON = [
     { id: 150, baseId: 150, name: "ミュウツー", _baseSpeciesName: "ミュウツー", formType: "normal", formLabel: "通常", types: ["エスパー"], hp: 106, atk: 110, def: 90, spa: 154, spd: 90, spe: 130, total: 680, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/150.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/150.ogg" },
     { id: 151, baseId: 151, name: "ミュウ", _baseSpeciesName: "ミュウ", formType: "normal", formLabel: "通常", types: ["エスパー"], hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 100, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/151.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/151.ogg" },
     { id: 154, baseId: 154, name: "メガニウム", _baseSpeciesName: "メガニウム", formType: "normal", formLabel: "通常", types: ["くさ"], hp: 80, atk: 82, def: 100, spa: 83, spd: 100, spe: 80, total: 525, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/154.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/154.ogg" },
+    { id: 445, baseId: 445, name: "ガブリアス", _baseSpeciesName: "ガブリアス", formType: "normal", formLabel: "通常", types: ["ドラゴン", "じめん"], hp: 108, atk: 130, def: 95, spa: 80, spd: 85, spe: 102, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/445.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/445.ogg" },
     { id: 469, baseId: 469, name: "メガヤンマ", _baseSpeciesName: "メガヤンマ", formType: "normal", formLabel: "通常", types: ["むし", "ひこう"], hp: 86, atk: 76, def: 86, spa: 116, spd: 56, spe: 95, total: 515, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/469.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/469.ogg" },
     { id: 628, baseId: 628, name: "ウォーグル", _baseSpeciesName: "ウォーグル", formType: "normal", formLabel: "通常", types: ["ノーマル", "ひこう"], hp: 100, atk: 123, def: 75, spa: 57, spd: 75, spe: 80, total: 510, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/628.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/628.ogg" },
+    { id: 658, baseId: 658, name: "ゲッコウガ", _baseSpeciesName: "ゲッコウガ", formType: "normal", formLabel: "通常", types: ["みず", "あく"], hp: 72, atk: 95, def: 67, spa: 103, spd: 71, spe: 122, total: 530, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/658.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/658.ogg" },
     { id: 706, baseId: 706, name: "ヌメルゴン", _baseSpeciesName: "ヌメルゴン", formType: "normal", formLabel: "通常", types: ["ドラゴン"], hp: 90, atk: 100, def: 70, spa: 110, spd: 150, spe: 80, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/706.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/706.ogg" },
-    // メガシンカ
+    // 公式全メガシンカ (48種) ＋ ゲンシカイキ (2種) ＋ サトシゲッコウガ (1種) ＋ アプリ専用メガメガニウム・メガメガヤンマ (2種)
+    { id: 10033, baseId: 3, name: "メガフシギバナ", rawName: "venusaur-mega", _baseSpeciesName: "フシギバナ", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "どく"], hp: 80, atk: 100, def: 123, spa: 122, spd: 120, spe: 80, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10033.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10033.ogg" },
     { id: 10034, baseId: 6, name: "メガリザードンX", rawName: "charizard-mega-x", _baseSpeciesName: "リザードン", formType: "mega", formLabel: "メガシンカX", types: ["ほのお", "ドラゴン"], hp: 78, atk: 130, def: 111, spa: 130, spd: 85, spe: 100, total: 634, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10034.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10034.ogg" },
     { id: 10035, baseId: 6, name: "メガリザードンY", rawName: "charizard-mega-y", _baseSpeciesName: "リザードン", formType: "mega", formLabel: "メガシンカY", types: ["ほのお", "ひこう"], hp: 78, atk: 104, def: 78, spa: 159, spd: 115, spe: 100, total: 634, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10035.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10035.ogg" },
-    { id: 10044, baseId: 150, name: "メガミュウツーY", rawName: "mewtwo-mega-y", _baseSpeciesName: "ミュウツー", formType: "mega", formLabel: "メガシンカY", types: ["エスパー"], hp: 106, atk: 150, def: 70, spa: 194, spd: 120, spe: 140, total: 780, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10044.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10044.ogg" },
-    { id: 10059, baseId: 448, name: "メガルカリオ", rawName: "lucario-mega", _baseSpeciesName: "ルカリオ", formType: "mega", formLabel: "メガシンカ", types: ["かくとう", "はがね"], hp: 70, atk: 145, def: 88, spa: 140, spd: 70, spe: 112, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10059.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10059.ogg" },
+    { id: 10036, baseId: 9, name: "メガカメックス", rawName: "blastoise-mega", _baseSpeciesName: "カメックス", formType: "mega", formLabel: "メガシンカ", types: ["みず"], hp: 79, atk: 103, def: 120, spa: 135, spd: 115, spe: 78, total: 630, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10036.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10036.ogg" },
+    { id: 10090, baseId: 15, name: "メガスピアー", rawName: "beedrill-mega", _baseSpeciesName: "スピアー", formType: "mega", formLabel: "メガシンカ", types: ["むし", "どく"], hp: 65, atk: 150, def: 40, spa: 15, spd: 80, spe: 145, total: 495, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10090.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10090.ogg" },
+    { id: 10073, baseId: 18, name: "メガピジョット", rawName: "pidgeot-mega", _baseSpeciesName: "ピジョット", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル", "ひこう"], hp: 83, atk: 80, def: 80, spa: 135, spd: 80, spe: 121, total: 579, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10073.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10073.ogg" },
+    { id: 10037, baseId: 65, name: "メガフーディン", rawName: "alakazam-mega", _baseSpeciesName: "フーディン", formType: "mega", formLabel: "メガシンカ", types: ["エスパー"], hp: 55, atk: 50, def: 65, spa: 175, spd: 105, spe: 150, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10037.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10037.ogg" },
+    { id: 10071, baseId: 80, name: "メガヤドラン", rawName: "slowbro-mega", _baseSpeciesName: "ヤドラン", formType: "mega", formLabel: "メガシンカ", types: ["みず", "エスパー"], hp: 95, atk: 75, def: 180, spa: 130, spd: 80, spe: 30, total: 590, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10071.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10071.ogg" },
     { id: 10038, baseId: 94, name: "メガゲンガー", rawName: "gengar-mega", _baseSpeciesName: "ゲンガー", formType: "mega", formLabel: "メガシンカ", types: ["ゴースト", "どく"], hp: 60, atk: 65, def: 80, spa: 170, spd: 95, spe: 130, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10038.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10038.ogg" },
+    { id: 10039, baseId: 115, name: "メガガルーラ", rawName: "kangaskhan-mega", _baseSpeciesName: "ガルーラ", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル"], hp: 105, atk: 125, def: 100, spa: 60, spd: 100, spe: 100, total: 590, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10039.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10039.ogg" },
+    { id: 10040, baseId: 127, name: "メガカイロス", rawName: "pinsir-mega", _baseSpeciesName: "カイロス", formType: "mega", formLabel: "メガシンカ", types: ["むし", "ひこう"], hp: 65, atk: 155, def: 120, spa: 65, spd: 90, spe: 105, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10040.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10040.ogg" },
+    { id: 10041, baseId: 130, name: "メガギャラドス", rawName: "gyarados-mega", _baseSpeciesName: "ギャラドス", formType: "mega", formLabel: "メガシンカ", types: ["みず", "あく"], hp: 95, atk: 155, def: 109, spa: 70, spd: 130, spe: 81, total: 640, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10041.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10041.ogg" },
+    { id: 10042, baseId: 142, name: "メガプテラ", rawName: "aerodactyl-mega", _baseSpeciesName: "プテラ", formType: "mega", formLabel: "メガシンカ", types: ["いわ", "ひこう"], hp: 80, atk: 135, def: 85, spa: 70, spd: 95, spe: 150, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10042.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10042.ogg" },
+    { id: 10043, baseId: 150, name: "メガミュウツーX", rawName: "mewtwo-mega-x", _baseSpeciesName: "ミュウツー", formType: "mega", formLabel: "メガシンカX", types: ["エスパー", "かくとう"], hp: 106, atk: 190, def: 100, spa: 154, spd: 100, spe: 130, total: 780, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10043.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10043.ogg" },
+    { id: 10044, baseId: 150, name: "メガミュウツーY", rawName: "mewtwo-mega-y", _baseSpeciesName: "ミュウツー", formType: "mega", formLabel: "メガシンカY", types: ["エスパー"], hp: 106, atk: 150, def: 70, spa: 194, spd: 120, spe: 140, total: 780, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10044.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10044.ogg" },
+    { id: 10045, baseId: 181, name: "メガデンリュウ", rawName: "ampharos-mega", _baseSpeciesName: "デンリュウ", formType: "mega", formLabel: "メガシンカ", types: ["でんき", "ドラゴン"], hp: 90, atk: 95, def: 105, spa: 165, spd: 110, spe: 45, total: 610, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10045.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10045.ogg" },
+    { id: 10072, baseId: 208, name: "メガハガネール", rawName: "steelix-mega", _baseSpeciesName: "ハガネール", formType: "mega", formLabel: "メガシンカ", types: ["はがね", "じめん"], hp: 75, atk: 125, def: 230, spa: 55, spd: 95, spe: 30, total: 610, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10072.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10072.ogg" },
+    { id: 10046, baseId: 212, name: "メガハッサム", rawName: "scizor-mega", _baseSpeciesName: "ハッサム", formType: "mega", formLabel: "メガシンカ", types: ["むし", "はがね"], hp: 70, atk: 150, def: 140, spa: 65, spd: 100, spe: 75, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10046.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10046.ogg" },
+    { id: 10047, baseId: 214, name: "メガヘラクロス", rawName: "heracross-mega", _baseSpeciesName: "ヘラクロス", formType: "mega", formLabel: "メガシンカ", types: ["むし", "かくとう"], hp: 80, atk: 185, def: 115, spa: 40, spd: 105, spe: 75, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10047.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10047.ogg" },
+    { id: 10048, baseId: 229, name: "メガヘルガー", rawName: "houndoom-mega", _baseSpeciesName: "ヘルガー", formType: "mega", formLabel: "メガシンカ", types: ["ほのお", "あく"], hp: 75, atk: 90, def: 90, spa: 140, spd: 90, spe: 115, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10048.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10048.ogg" },
+    { id: 10049, baseId: 248, name: "メガバンギラス", rawName: "tyranitar-mega", _baseSpeciesName: "バンギラス", formType: "mega", formLabel: "メガシンカ", types: ["いわ", "あく"], hp: 100, atk: 164, def: 150, spa: 95, spd: 120, spe: 71, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10049.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10049.ogg" },
+    { id: 10065, baseId: 254, name: "メガジュカイン", rawName: "sceptile-mega", _baseSpeciesName: "ジュカイン", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "ドラゴン"], hp: 70, atk: 110, def: 75, spa: 145, spd: 85, spe: 145, total: 630, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10065.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10065.ogg" },
+    { id: 10050, baseId: 257, name: "メガバシャーモ", rawName: "blaziken-mega", _baseSpeciesName: "バシャーモ", formType: "mega", formLabel: "メガシンカ", types: ["ほのお", "かくとう"], hp: 80, atk: 160, def: 80, spa: 130, spd: 80, spe: 100, total: 630, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10050.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10050.ogg" },
+    { id: 10064, baseId: 260, name: "メガラグラージ", rawName: "swampert-mega", _baseSpeciesName: "ラグラージ", formType: "mega", formLabel: "メガシンカ", types: ["みず", "じめん"], hp: 100, atk: 150, def: 110, spa: 95, spd: 110, spe: 70, total: 635, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10064.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10064.ogg" },
+    { id: 10051, baseId: 282, name: "メガサーナイト", rawName: "gardevoir-mega", _baseSpeciesName: "サーナイト", formType: "mega", formLabel: "メガシンカ", types: ["エスパー", "フェアリー"], hp: 68, atk: 85, def: 65, spa: 165, spd: 135, spe: 100, total: 618, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10051.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10051.ogg" },
+    { id: 10066, baseId: 302, name: "メガヤミラミ", rawName: "sableye-mega", _baseSpeciesName: "ヤミラミ", formType: "mega", formLabel: "メガシンカ", types: ["あく", "ゴースト"], hp: 50, atk: 85, def: 125, spa: 85, spd: 115, spe: 20, total: 480, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10066.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10066.ogg" },
+    { id: 10052, baseId: 303, name: "メガクチート", rawName: "mawile-mega", _baseSpeciesName: "クチート", formType: "mega", formLabel: "メガシンカ", types: ["はがね", "フェアリー"], hp: 50, atk: 105, def: 125, spa: 55, spd: 95, spe: 50, total: 480, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10052.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10052.ogg" },
+    { id: 10053, baseId: 306, name: "メガボスゴドラ", rawName: "aggron-mega", _baseSpeciesName: "ボスゴドラ", formType: "mega", formLabel: "メガシンカ", types: ["はがね"], hp: 70, atk: 140, def: 230, spa: 60, spd: 80, spe: 50, total: 630, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10053.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10053.ogg" },
+    { id: 10054, baseId: 308, name: "メガチャーレム", rawName: "medicham-mega", _baseSpeciesName: "チャーレム", formType: "mega", formLabel: "メガシンカ", types: ["かくとう", "エスパー"], hp: 60, atk: 100, def: 85, spa: 80, spd: 85, spe: 100, total: 510, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10054.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10054.ogg" },
+    { id: 10055, baseId: 310, name: "メガライボルト", rawName: "manectric-mega", _baseSpeciesName: "ライボルト", formType: "mega", formLabel: "メガシンカ", types: ["でんき"], hp: 70, atk: 75, def: 80, spa: 135, spd: 80, spe: 135, total: 575, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10055.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10055.ogg" },
+    { id: 10070, baseId: 319, name: "メガサメハダー", rawName: "sharpedo-mega", _baseSpeciesName: "サメハダー", formType: "mega", formLabel: "メガシンカ", types: ["みず", "あく"], hp: 70, atk: 140, def: 70, spa: 110, spd: 65, spe: 105, total: 560, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10070.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10070.ogg" },
+    { id: 10069, baseId: 323, name: "メガバクーダ", rawName: "camerupt-mega", _baseSpeciesName: "バクーダ", formType: "mega", formLabel: "メガシンカ", types: ["ほのお", "じめん"], hp: 70, atk: 120, def: 100, spa: 145, spd: 105, spe: 20, total: 560, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10069.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10069.ogg" },
+    { id: 10067, baseId: 334, name: "メガチルタリス", rawName: "altaria-mega", _baseSpeciesName: "チルタリス", formType: "mega", formLabel: "メガシンカ", types: ["ドラゴン", "フェアリー"], hp: 75, atk: 110, def: 110, spa: 110, spd: 105, spe: 80, total: 590, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10067.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10067.ogg" },
+    { id: 10056, baseId: 354, name: "メガジュペッタ", rawName: "banette-mega", _baseSpeciesName: "ジュペッタ", formType: "mega", formLabel: "メガシンカ", types: ["ゴースト"], hp: 64, atk: 165, def: 75, spa: 93, spd: 83, spe: 75, total: 555, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10056.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10056.ogg" },
+    { id: 10057, baseId: 359, name: "メガアブソル", rawName: "absol-mega", _baseSpeciesName: "アブソル", formType: "mega", formLabel: "メガシンカ", types: ["あく"], hp: 65, atk: 150, def: 60, spa: 115, spd: 60, spe: 115, total: 565, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10057.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10057.ogg" },
+    { id: 10074, baseId: 362, name: "メガオニゴーリ", rawName: "glalie-mega", _baseSpeciesName: "オニゴーリ", formType: "mega", formLabel: "メガシンカ", types: ["こおり"], hp: 80, atk: 120, def: 80, spa: 120, spd: 80, spe: 100, total: 580, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10074.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10074.ogg" },
+    { id: 10089, baseId: 373, name: "メガボーマンダ", rawName: "salamence-mega", _baseSpeciesName: "ボーマンダ", formType: "mega", formLabel: "メガシンカ", types: ["ドラゴン", "ひこう"], hp: 95, atk: 145, def: 130, spa: 120, spd: 90, spe: 120, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10089.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10089.ogg" },
+    { id: 10076, baseId: 376, name: "メガメタグロス", rawName: "metagross-mega", _baseSpeciesName: "メタグロス", formType: "mega", formLabel: "メガシンカ", types: ["はがね", "エスパー"], hp: 80, atk: 145, def: 150, spa: 105, spd: 110, spe: 110, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10076.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10076.ogg" },
+    { id: 10062, baseId: 380, name: "メガラティアス", rawName: "latias-mega", _baseSpeciesName: "ラティアス", formType: "mega", formLabel: "メガシンカ", types: ["ドラゴン", "エスパー"], hp: 80, atk: 100, def: 120, spa: 140, spd: 150, spe: 110, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10062.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10062.ogg" },
+    { id: 10063, baseId: 381, name: "メガラティオス", rawName: "latios-mega", _baseSpeciesName: "ラティオス", formType: "mega", formLabel: "メガシンカ", types: ["ドラゴン", "エスパー"], hp: 80, atk: 130, def: 100, spa: 160, spd: 120, spe: 110, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10063.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10063.ogg" },
+    { id: 10077, baseId: 382, name: "ゲンシカイオーガ", rawName: "kyogre-primal", _baseSpeciesName: "カイオーガ", formType: "mega", formLabel: "ゲンシカイキ", types: ["みず"], hp: 100, atk: 150, def: 90, spa: 180, spd: 160, spe: 90, total: 770, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10077.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10077.ogg" },
+    { id: 10078, baseId: 383, name: "ゲンシグラードン", rawName: "groudon-primal", _baseSpeciesName: "グラードン", formType: "mega", formLabel: "ゲンシカイキ", types: ["じめん", "ほのお"], hp: 100, atk: 180, def: 160, spa: 150, spd: 90, spe: 90, total: 770, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10078.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10078.ogg" },
+    { id: 10079, baseId: 384, name: "メガレックウザ", rawName: "rayquaza-mega", _baseSpeciesName: "レックウザ", formType: "mega", formLabel: "メガシンカ", types: ["ドラゴン", "ひこう"], hp: 105, atk: 180, def: 100, spa: 180, spd: 100, spe: 115, total: 780, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10079.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10079.ogg" },
+    { id: 10088, baseId: 428, name: "メガミミロップ", rawName: "lopunny-mega", _baseSpeciesName: "ミミロップ", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル", "かくとう"], hp: 65, atk: 136, def: 94, spa: 54, spd: 96, spe: 135, total: 580, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10088.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10088.ogg" },
+    { id: 10058, baseId: 445, name: "メガガブリアス", rawName: "garchomp-mega", _baseSpeciesName: "ガブリアス", formType: "mega", formLabel: "メガシンカ", types: ["ドラゴン", "じめん"], hp: 108, atk: 170, def: 115, spa: 120, spd: 95, spe: 92, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10058.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10058.ogg" },
+    { id: 10059, baseId: 448, name: "メガルカリオ", rawName: "lucario-mega", _baseSpeciesName: "ルカリオ", formType: "mega", formLabel: "メガシンカ", types: ["かくとう", "はがね"], hp: 70, atk: 145, def: 88, spa: 140, spd: 70, spe: 112, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10059.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10059.ogg" },
+    { id: 10060, baseId: 460, name: "メガユキノオー", rawName: "abomasnow-mega", _baseSpeciesName: "ユキノオー", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "こおり"], hp: 90, atk: 132, def: 105, spa: 132, spd: 105, spe: 30, total: 594, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10060.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10060.ogg" },
+    { id: 10068, baseId: 475, name: "メガエルレイド", rawName: "gallade-mega", _baseSpeciesName: "エルレイド", formType: "mega", formLabel: "メガシンカ", types: ["エスパー", "かくとう"], hp: 68, atk: 165, def: 95, spa: 65, spd: 115, spe: 110, total: 618, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10068.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10068.ogg" },
+    { id: 10061, baseId: 531, name: "メガタブンネ", rawName: "audino-mega", _baseSpeciesName: "タブンネ", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル", "フェアリー"], hp: 103, atk: 60, def: 126, spa: 80, spd: 126, spe: 50, total: 545, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10061.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10061.ogg" },
+    { id: 10117, baseId: 658, name: "サトシゲッコウガ (メガゲッコウガ)", rawName: "greninja-ash", _baseSpeciesName: "ゲッコウガ", formType: "mega", formLabel: "メガシンカ", types: ["みず", "あく"], hp: 72, atk: 145, def: 67, spa: 153, spd: 71, spe: 132, total: 640, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10117.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10117.ogg" },
+    { id: 10075, baseId: 719, name: "メガディアンシー", rawName: "diancie-mega", _baseSpeciesName: "ディアンシー", formType: "mega", formLabel: "メガシンカ", types: ["いわ", "フェアリー"], hp: 50, atk: 160, def: 110, spa: 160, spd: 110, spe: 110, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10075.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10075.ogg" },
     { id: 10282, baseId: 154, name: "メガメガニウム", rawName: "meganium-mega", _baseSpeciesName: "メガニウム", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "フェアリー"], hp: 80, atk: 92, def: 115, spa: 143, spd: 115, spe: 80, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10282.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/154.ogg" },
     { id: 10999, baseId: 469, name: "メガメガヤンマ", rawName: "yanmega-mega", _baseSpeciesName: "メガヤンマ", formType: "mega", formLabel: "メガシンカ", types: ["むし", "ひこう"], hp: 86, atk: 86, def: 96, spa: 156, spd: 76, spe: 115, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/469.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/469.ogg" },
     // 全リージョンフォーム (アローラ・ガラル・ヒスイ・パルデア)
@@ -330,6 +382,11 @@ function shouldExcludePokemon(rawName, id, baseId) {
         return true;
     }
 
+    // 17.5 ゲッコウガの重複形態（きずなへんげ準備形態 ID 10116）の除外（種族値530で通常ゲッコウガと同一のため除外。種族値640のサトシゲッコウガ ID 10117 は許可）
+    if (n.includes('greninja-battle-bond') || id === 10116) {
+        return true;
+    }
+
     // 18. メガシンカの妥当性チェック（VALID_MEGA_BASE_IDSに含まれる公式メガシンカ＋メガジジーロン等を許可）
     if (n.includes('-mega') || n.includes('-primal')) {
         if (baseId && !VALID_MEGA_BASE_IDS.has(baseId)) {
@@ -384,6 +441,11 @@ function determineFormInfo(rawName, id, speciesName) {
     }
 
     const n = (rawName || '').toLowerCase();
+
+    // サトシゲッコウガ（メガゲッコウガ枠・種族値640）
+    if (n.includes('greninja-ash') || id === 10117) {
+        return { formType: 'mega', formLabel: 'メガシンカ', displayName: 'サトシゲッコウガ (メガゲッコウガ)' };
+    }
 
     // メガシンカ / ゲンシカイキ
     if (n.includes('-mega-z')) {
@@ -630,11 +692,12 @@ function checkAllGensPresent(list) {
 let isRecoveringData = false;
 
 async function fetchOptimizedPokemonData(forceRefresh = false) {
-    const CACHE_KEY = 'poketone_clean_v9';
+    const CACHE_KEY = 'poketone_clean_v10';
 
     // 1. 既存キャッシュの探索 (forceRefresh でない場合のみ)
     if (!forceRefresh) {
-        const cached = localStorage.getItem('poketone_clean_v9') ||
+        const cached = localStorage.getItem('poketone_clean_v10') ||
+            localStorage.getItem('poketone_clean_v9') ||
             localStorage.getItem('poketone_clean_v8') ||
             localStorage.getItem('poketone_clean_v7') ||
             localStorage.getItem('poketone_clean_v6') ||
@@ -722,8 +785,8 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
 
                     // キャッシュを最新キーに同期保存
                     try {
-                        localStorage.setItem('poketone_clean_v8', JSON.stringify(pokemonList));
                         localStorage.setItem('poketone_clean_v9', JSON.stringify(pokemonList));
+                        localStorage.setItem('poketone_clean_v10', JSON.stringify(pokemonList));
                     } catch (e) { }
 
                     updateLoadedCount();
@@ -924,8 +987,8 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
 
             // バッチごとに進捗を保存（途中でリロードしても続きから再開可能に）
             try {
-                localStorage.setItem('poketone_clean_v8', JSON.stringify(pokemonList));
                 localStorage.setItem('poketone_clean_v9', JSON.stringify(pokemonList));
+                localStorage.setItem('poketone_clean_v10', JSON.stringify(pokemonList));
             } catch (e) { }
 
             updateLoadedCount();
@@ -941,7 +1004,7 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
         if (pokemonList.length >= 1000) {
             try {
                 localStorage.setItem('poketone_cache_complete', 'true');
-                localStorage.setItem('poketone_clean_v9', JSON.stringify(pokemonList));
+                localStorage.setItem('poketone_clean_v10', JSON.stringify(pokemonList));
             } catch (e) { }
             console.log("Full sync complete! Total loaded:", pokemonList.length);
         }
@@ -963,7 +1026,8 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
 }
 
 // 自動データリカバリー（候補0件やデータ破損を検知した時に自動発動）
-async function triggerAutoDataRecovery() {
+// autoStartQuiz: true の場合は同期完了後にクイズを開始、false の場合は同期完了メッセージのみ表示（手動再同期時）
+async function triggerAutoDataRecovery(autoStartQuiz = true) {
     if (isRecoveringData) return;
     isRecoveringData = true;
 
@@ -981,12 +1045,17 @@ async function triggerAutoDataRecovery() {
         if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
         isRecoveringData = false;
 
-        // 再度クイズ開始を試行
-        const candidates = getFilteredCandidates(quizSelectedDifficulty, quizSelectedGens);
-        if (candidates && candidates.length > 0) {
-            startConfiguredQuiz();
+        if (autoStartQuiz) {
+            // クイズ開始からの自動リカバリー時のみ、再度クイズ開始を実行
+            const candidates = getFilteredCandidates(quizSelectedDifficulty, quizSelectedGens);
+            if (candidates && candidates.length > 0) {
+                startConfiguredQuiz();
+            } else {
+                alert('PokeAPIからデータを再同期しましたが、選択した世代のポケモンが見つかりませんでした。別の世代を選択してください。');
+            }
         } else {
-            alert('PokeAPIからデータを再同期しましたが、選択した世代のポケモンが見つかりませんでした。別の世代を選択してください。');
+            // 手動再同期ボタンを押した時は、勝手にクイズを始めず完了通知のみ表示
+            alert(`PokeAPIからの全ポケモンデータの再同期が完了しました！（全 ${pokemonList.length} 匹）`);
         }
     } catch (err) {
         console.error("Auto recovery failed:", err);
@@ -995,14 +1064,14 @@ async function triggerAutoDataRecovery() {
     }
 }
 
-// 手動再同期関数（ヘッダーや設定画面のボタンから呼び出し）
+// 手動再同期関数（ヘッダーや設定画面のボタンから呼び出し：勝手にクイズは開始しない）
 async function triggerManualDataSync() {
     if (isRecoveringData) {
         alert('現在データを取得・同期中です。完了までしばらくお待ちください。');
         return;
     }
     if (confirm('PokeAPIから最新の全ポケモンデータを再取得しますか？\n（古いキャッシュをリセットして全件再同期します）')) {
-        await triggerAutoDataRecovery();
+        await triggerAutoDataRecovery(false);
     }
 }
 
@@ -2585,6 +2654,19 @@ function getPokemonAliases(p) {
             aliases.add('メガヤンマメガ');
             aliases.add('メガヤンマ(メガシンカ)');
             aliases.add('メガヤンマ (メガシンカ)');
+        }
+        // ゲッコウガ（サトシゲッコウガ / メガゲッコウガ）専用エイリアス強化
+        if (baseName === 'ゲッコウガ' || pRaw.includes('greninja-ash') || p.id === 10117) {
+            aliases.add('メガゲッコウガ');
+            aliases.add('サトシゲッコウガ');
+            aliases.add('ゲッコウガメガ');
+            aliases.add('ゲッコウガ(メガ)');
+            aliases.add('ゲッコウガ (メガ)');
+            aliases.add('ゲッコウガ(メガゲッコウガ)');
+            aliases.add('ゲッコウガ (メガゲッコウガ)');
+            aliases.add('ゲッコウガ(サトシゲッコウガ)');
+            aliases.add('ゲッコウガ (サトシゲッコウガ)');
+            aliases.add('サトシゲッコウガ (メガゲッコウガ)');
         }
     }
 
