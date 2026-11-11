@@ -617,137 +617,172 @@ function updateFormCounts() {
     });
 }
 
-async function fetchOptimizedPokemonData() {
-    const CACHE_KEY = 'poketone_clean_v8';
+// 全世代のポケモンが十分に存在するか検証する関数（完全性チェック）
+function checkAllGensPresent(list) {
+    if (!list || list.length < 500) return false;
+    for (let gen = 1; gen <= 9; gen++) {
+        const count = list.filter(p => getPokemonGeneration(p) === gen).length;
+        if (count < 5) return false; // 各世代に最低5匹以上存在すること
+    }
+    return true;
+}
 
-    // 1. 既存キャッシュの探索 (v8を最優先、v9, v7等もフォールバック)
-    const cached = localStorage.getItem('poketone_clean_v8') ||
-        localStorage.getItem('poketone_clean_v9') ||
-        localStorage.getItem('poketone_clean_v7') ||
-        localStorage.getItem('poketone_clean_v6') ||
-        localStorage.getItem('poketone_clean_v5') ||
-        localStorage.getItem('poketone_clean_v4') ||
-        localStorage.getItem('poketone_clean_v3') ||
-        localStorage.getItem('poketone_clean_v2') ||
-        localStorage.getItem('poketone_clean_v1') ||
-        localStorage.getItem('pokestats_master_v1351_all_forms');
+let isRecoveringData = false;
 
-    if (cached) {
-        try {
-            const rawList = JSON.parse(cached);
-            if (Array.isArray(rawList) && rawList.length > 0) {
-                let cleanedList = rawList
-                    .filter(p => p && (p.name || p.rawName))
-                    .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
-                    .map(p => {
-                        // ID 10165 はヤドラン (ガラルのすがた) であるべき
-                        if (p.id === 10165 && (p.rawName?.includes('zigzagoon') || p.name?.includes('ジグザグマ'))) {
-                            p.baseId = 80;
-                            p.rawName = 'slowbro-galar';
-                            p._baseSpeciesName = 'ヤドラン';
-                            p.name = 'ヤドラン (ガラルのすがた)';
-                            p.formType = 'regional';
-                            p.formLabel = 'ガラル';
-                            p.types = ['どく', 'エスパー'];
-                            p.hp = 95; p.atk = 100; p.def = 95; p.spa = 100; p.spd = 70; p.spe = 30; p.total = 490;
-                            p.image = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10165.png';
-                            p.cry = 'https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10165.ogg';
+async function fetchOptimizedPokemonData(forceRefresh = false) {
+    const CACHE_KEY = 'poketone_clean_v9';
+
+    // 1. 既存キャッシュの探索 (forceRefresh でない場合のみ)
+    if (!forceRefresh) {
+        const cached = localStorage.getItem('poketone_clean_v9') ||
+            localStorage.getItem('poketone_clean_v8') ||
+            localStorage.getItem('poketone_clean_v7') ||
+            localStorage.getItem('poketone_clean_v6') ||
+            localStorage.getItem('poketone_clean_v5') ||
+            localStorage.getItem('poketone_clean_v4') ||
+            localStorage.getItem('poketone_clean_v3') ||
+            localStorage.getItem('poketone_clean_v2') ||
+            localStorage.getItem('poketone_clean_v1') ||
+            localStorage.getItem('pokestats_master_v1351_all_forms');
+
+        if (cached) {
+            try {
+                const rawList = JSON.parse(cached);
+                if (Array.isArray(rawList) && rawList.length > 0) {
+                    let cleanedList = rawList
+                        .filter(p => p && (p.name || p.rawName))
+                        .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
+                        .map(p => {
+                            // ID 10165 はヤドラン (ガラルのすがた) であるべき
+                            if (p.id === 10165 && (p.rawName?.includes('zigzagoon') || p.name?.includes('ジグザグマ'))) {
+                                p.baseId = 80;
+                                p.rawName = 'slowbro-galar';
+                                p._baseSpeciesName = 'ヤドラン';
+                                p.name = 'ヤドラン (ガラルのすがた)';
+                                p.formType = 'regional';
+                                p.formLabel = 'ガラル';
+                                p.types = ['どく', 'エスパー'];
+                                p.hp = 95; p.atk = 100; p.def = 95; p.spa = 100; p.spd = 70; p.spe = 30; p.total = 490;
+                                p.image = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10165.png';
+                                p.cry = 'https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10165.ogg';
+                            }
+                            // メガニウム / メガヤンマ / メガメガニウム
+                            if (p.id === 154) {
+                                p.name = 'メガニウム';
+                                p._baseSpeciesName = 'メガニウム';
+                                p.formType = 'normal';
+                                p.formLabel = '通常';
+                            } else if (p.id === 469) {
+                                p.name = 'メガヤンマ';
+                                p._baseSpeciesName = 'メガヤンマ';
+                                p.formType = 'normal';
+                                p.formLabel = '通常';
+                            } else if (p.id === 10282) {
+                                p.name = 'メガメガニウム';
+                                p._baseSpeciesName = 'メガニウム';
+                                p.formType = 'mega';
+                                p.formLabel = 'メガシンカ';
+                            }
+                            if (p.cry && p.cry.includes('/sprites/pokemon/latest/')) {
+                                p.cry = p.cry.replace('/sprites/pokemon/latest/', '/cries/pokemon/latest/');
+                            }
+                            const cleanBase = cleanBaseSpeciesName(p._baseSpeciesName || p.name);
+                            p._baseSpeciesName = cleanBase;
+                            if (p.rawName) {
+                                const parsed = determineFormInfo(p.rawName, p.id, cleanBase);
+                                p.formType = parsed.formType;
+                                p.formLabel = parsed.formLabel;
+                                p.name = parsed.displayName;
+                            } else if (p.formType === 'normal') {
+                                p.name = cleanBase;
+                            }
+                            // 画像URLの完全補完（空・無効・モンスターボールなら正しい公式アートワークURLを自動設定）
+                            if (!p.image || typeof p.image !== 'string' || !p.image.startsWith('http') || p.image.includes('data:image')) {
+                                p.image = getPokemonImageUrl(p);
+                            }
+                            return p;
+                        });
+
+                    // 必須のフォールバックポケモン（全リージョンフォーム等）で欠けているものを補充
+                    EMBEDDED_FALLBACK_POKEMON.forEach(fb => {
+                        if (!cleanedList.some(p => p.id === fb.id)) {
+                            cleanedList.push(fb);
                         }
-                        // メガニウム / メガヤンマ / メガメガニウム
-                        if (p.id === 154) {
-                            p.name = 'メガニウム';
-                            p._baseSpeciesName = 'メガニウム';
-                            p.formType = 'normal';
-                            p.formLabel = '通常';
-                        } else if (p.id === 469) {
-                            p.name = 'メガヤンマ';
-                            p._baseSpeciesName = 'メガヤンマ';
-                            p.formType = 'normal';
-                            p.formLabel = '通常';
-                        } else if (p.id === 10282) {
-                            p.name = 'メガメガニウム';
-                            p._baseSpeciesName = 'メガニウム';
-                            p.formType = 'mega';
-                            p.formLabel = 'メガシンカ';
-                        }
-                        if (p.cry && p.cry.includes('/sprites/pokemon/latest/')) {
-                            p.cry = p.cry.replace('/sprites/pokemon/latest/', '/cries/pokemon/latest/');
-                        }
-                        const cleanBase = cleanBaseSpeciesName(p._baseSpeciesName || p.name);
-                        p._baseSpeciesName = cleanBase;
-                        if (p.rawName) {
-                            const parsed = determineFormInfo(p.rawName, p.id, cleanBase);
-                            p.formType = parsed.formType;
-                            p.formLabel = parsed.formLabel;
-                            p.name = parsed.displayName;
-                        } else if (p.formType === 'normal') {
-                            p.name = cleanBase;
-                        }
-                        // 画像URLの完全補完（空・無効・モンスターボールなら正しい公式アートワークURLを自動設定）
-                        if (!p.image || typeof p.image !== 'string' || !p.image.startsWith('http') || p.image.includes('data:image')) {
-                            p.image = getPokemonImageUrl(p);
-                        }
-                        return p;
                     });
 
-                // 必須のフォールバックポケモン（全リージョンフォーム等）で欠けているものを補充
-                EMBEDDED_FALLBACK_POKEMON.forEach(fb => {
-                    if (!cleanedList.some(p => p.id === fb.id)) {
-                        cleanedList.push(fb);
-                    }
-                });
+                    // ソート: 全国図鑑番号（baseId）順かつ同一番号内はID順
+                    cleanedList.sort((a, b) => {
+                        const bA = a.baseId || a.id;
+                        const bB = b.baseId || b.id;
+                        if (bA === bB) return a.id - b.id;
+                        return bA - bB;
+                    });
 
-                // ソート: 全国図鑑番号（baseId）順かつ同一番号内はID順
-                cleanedList.sort((a, b) => {
-                    const bA = a.baseId || a.id;
-                    const bB = b.baseId || b.id;
-                    if (bA === bB) return a.id - b.id;
-                    return bA - bB;
-                });
+                    pokemonList = cleanedList;
 
-                pokemonList = cleanedList;
+                    // キャッシュを最新キーに同期保存
+                    try {
+                        localStorage.setItem('poketone_clean_v8', JSON.stringify(pokemonList));
+                        localStorage.setItem('poketone_clean_v9', JSON.stringify(pokemonList));
+                    } catch (e) { }
 
-                // キャッシュを最新キーに同期保存
-                try {
-                    localStorage.setItem('poketone_clean_v8', JSON.stringify(pokemonList));
-                    localStorage.setItem('poketone_clean_v9', JSON.stringify(pokemonList));
-                } catch (e) { }
-
-                updateLoadedCount();
-                updateFormCounts();
-                filterAndRenderPokemon();
-
-                // キャッシュにデータがあれば即座にローディングバナーを非表示にして終了（無駄なPokeAPI通信を一切しない！）
-                if (pokemonList.length >= 50) {
-                    const banner = document.getElementById('loading-banner');
-                    if (banner) banner.classList.add('hidden');
                     updateLoadedCount();
-                    console.log("Loaded " + pokemonList.length + " pokemon from cache successfully.");
-                    return;
+                    updateFormCounts();
+                    filterAndRenderPokemon();
+                    if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
+                    if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
+
+                    // キャッシュ完全性チェック（1000件以上かつ全世代揃っているか）
+                    const isComplete = (pokemonList.length >= 1000) && checkAllGensPresent(pokemonList);
+                    if (isComplete) {
+                        const banner = document.getElementById('loading-banner');
+                        if (banner) banner.classList.add('hidden');
+                        updateLoadedCount();
+                        console.log("Loaded " + pokemonList.length + " pokemon from cache successfully (Complete data).");
+                        return;
+                    } else {
+                        console.warn("Cached data is incomplete (" + pokemonList.length + " pokemon). Auto-continuing background sync from PokeAPI...");
+                    }
                 }
+            } catch (e) {
+                console.warn("Cache parse error, falling back...", e);
             }
-        } catch (e) {
-            console.warn("Cache parse error, falling back...", e);
         }
+    } else {
+        console.log("Force refresh requested. Clearing cache and fetching fresh data from PokeAPI...");
+        try {
+            localStorage.removeItem('poketone_clean_v8');
+            localStorage.removeItem('poketone_clean_v9');
+            localStorage.removeItem('poketone_clean_v7');
+            localStorage.removeItem('poketone_cache_complete');
+        } catch (e) { }
     }
 
     // 初期状態は内蔵フォールバックを表示（画像URL完全補完）
-    pokemonList = [...EMBEDDED_FALLBACK_POKEMON]
-        .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
-        .map(p => { p.image = getPokemonImageUrl(p); return p; });
+    if (!pokemonList || pokemonList.length === 0) {
+        pokemonList = [...EMBEDDED_FALLBACK_POKEMON]
+            .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
+            .map(p => { p.image = getPokemonImageUrl(p); return p; });
+    }
     updateLoadedCount();
     updateFormCounts();
     filterAndRenderPokemon();
+    if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
+    if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
 
-    // 2. ネットワーク経由での取得（キャッシュがない場合のみ）
+    // 2. ネットワーク経由での取得（未取得分の差分取得または再同期）
     try {
+        const loadingBanner = document.getElementById('loading-banner');
+        if (loadingBanner) loadingBanner.classList.remove('hidden');
         const loadingText = document.getElementById('loading-text');
-        if (loadingText) loadingText.textContent = "データを同期中...（内蔵データですぐにプレイ可能です）";
+        if (loadingText) loadingText.textContent = "PokeAPIから全ポケモンデータを取得・同期中...（そのままプレイ可能です）";
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5秒でタイムアウトして内蔵データで起動
+        const timeoutMs = forceRefresh ? 15000 : 7000;
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=10000', { signal: controller.signal });
+        clearTimeout(timeoutId);
         clearTimeout(timeoutId);
 
         if (!res.ok) throw new Error('PokeAPI response not OK');
@@ -902,19 +937,72 @@ async function fetchOptimizedPokemonData() {
             if (pBar) pBar.style.width = percent + '%';
         }
 
+        // 全件の取得が完了した場合のみ、完全キャッシュ完了フラグをセット
+        if (pokemonList.length >= 1000) {
+            try {
+                localStorage.setItem('poketone_cache_complete', 'true');
+                localStorage.setItem('poketone_clean_v9', JSON.stringify(pokemonList));
+            } catch (e) { }
+            console.log("Full sync complete! Total loaded:", pokemonList.length);
+        }
+
         const banner = document.getElementById('loading-banner');
         if (banner) banner.classList.add('hidden');
         updateLoadedCount();
     } catch (error) {
-        console.warn("Network or PokeAPI error, using cached / embedded fallback data.", error);
+        console.warn("Network or PokeAPI error, using current loaded / embedded fallback data.", error);
         const loadingText = document.getElementById('loading-text');
-        if (loadingText) loadingText.textContent = "内蔵フォールバックデータで起動完了";
+        if (loadingText) loadingText.textContent = "同期を完了しました";
         const banner = document.getElementById('loading-banner');
         if (banner) {
             setTimeout(() => {
                 banner.classList.add('hidden');
             }, 800);
         }
+    }
+}
+
+// 自動データリカバリー（候補0件やデータ破損を検知した時に自動発動）
+async function triggerAutoDataRecovery() {
+    if (isRecoveringData) return;
+    isRecoveringData = true;
+
+    const banner = document.getElementById('loading-banner');
+    const loadingText = document.getElementById('loading-text');
+    if (banner) banner.classList.remove('hidden');
+    if (loadingText) {
+        loadingText.textContent = "ポケモンデータの不足・キャッシュ不整合を検知しました。PokeAPIから最新データを自動同期中...";
+    }
+
+    try {
+        await fetchOptimizedPokemonData(true);
+        updateLoadedCount();
+        if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
+        if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
+        isRecoveringData = false;
+
+        // 再度クイズ開始を試行
+        const candidates = getFilteredCandidates(quizSelectedDifficulty, quizSelectedGens);
+        if (candidates && candidates.length > 0) {
+            startConfiguredQuiz();
+        } else {
+            alert('PokeAPIからデータを再同期しましたが、選択した世代のポケモンが見つかりませんでした。別の世代を選択してください。');
+        }
+    } catch (err) {
+        console.error("Auto recovery failed:", err);
+        isRecoveringData = false;
+        alert('PokeAPIとの通信でエラーが発生しました。インターネット接続を確認の上、再度お試しください。');
+    }
+}
+
+// 手動再同期関数（ヘッダーや設定画面のボタンから呼び出し）
+async function triggerManualDataSync() {
+    if (isRecoveringData) {
+        alert('現在データを取得・同期中です。完了までしばらくお待ちください。');
+        return;
+    }
+    if (confirm('PokeAPIから最新の全ポケモンデータを再取得しますか？\n（古いキャッシュをリセットして全件再同期します）')) {
+        await triggerAutoDataRecovery();
     }
 }
 
@@ -2246,8 +2334,9 @@ function startConfiguredQuiz() {
     }
 
     const candidates = getFilteredCandidates(quizSelectedDifficulty, quizSelectedGens);
-    if (!candidates || candidates.length === 0) {
-        alert('該当するポケモンが見つかりませんでした。別の世代を選択してください。');
+    if (!candidates || candidates.length === 0 || pokemonList.length < 50) {
+        console.warn('出題候補が0件またはデータ不足のため、自動リカバリー（PokeAPI再同期）を実行します。');
+        triggerAutoDataRecovery();
         return;
     }
 
