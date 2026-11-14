@@ -3158,12 +3158,14 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
     const badge = getFormBadgeHtml(p);
     const displayId = (p.baseId || p.id).toString().padStart(4, '0');
 
+    let attemptsUsed = 0;
+
     if (isWin) {
         iconWrap.className = 'w-24 h-24 rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-md bg-emerald-50 text-emerald-600 border border-emerald-200 animate-bounce';
         iconWrap.innerHTML = '<i class="fa-solid fa-crown text-amber-500"></i>';
         title.className = 'text-2xl sm:text-3xl font-black text-slate-900';
         title.textContent = '正解！';
-        const attemptsUsed = QUIZ_MAX_ATTEMPTS - quizRemainingAttempts + 1;
+        attemptsUsed = QUIZ_MAX_ATTEMPTS - quizRemainingAttempts + 1;
 
         if (isSameStatsVariant && answeredPokemon && answeredPokemon.name !== p.name) {
             desc.textContent = `${attemptsUsed}回目の回答で見事正解しました！（「${answeredPokemon.name}」と「${p.name}」は種族値が同じです）`;
@@ -3232,8 +3234,193 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
         </div>
     `;
 
+    if (isWin) {
+        renderQuizShareSection(p, attemptsUsed);
+    } else {
+        hideQuizShareSection();
+    }
+
     setTimeout(() => {
         triggerQuizWave(2.6);
         playStatMelody(p);
     }, 400);
+}
+
+// ================= SNSシェア機能 (正解時のみ・ネタバレなし絵文字グリッド) =================
+let _latestQuizShareText = '';
+let _quizShareCopyTimer = null;
+
+function getQuizShareModeLabel(difficulty, genSet) {
+    let genLabel = '全世代';
+    if (genSet && genSet.size > 0 && genSet.size < 9) {
+        if (genSet.size === 1) {
+            const g = Array.from(genSet)[0];
+            const info = GENERATION_CONFIG[g];
+            genLabel = info ? `${info.name}(${info.region})` : `第${g}世代`;
+        } else if (genSet.size <= 3) {
+            const sorted = Array.from(genSet).sort((a, b) => a - b);
+            genLabel = `第${sorted.join('・')}世代`;
+        } else {
+            genLabel = `${genSet.size}世代ミックス`;
+        }
+    }
+    const diffLabel = (difficulty === 'normal') ? '★ノーマル' : '🔥ハード';
+    return `${genLabel} ${diffLabel}`;
+}
+
+function getPublicShareUrl() {
+    try {
+        const { protocol, hostname, origin, pathname } = window.location;
+        const isHttp = (protocol === 'http:' || protocol === 'https:');
+        const isLocal = !hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+        if (isHttp && !isLocal) {
+            return `${origin}${pathname}`;
+        }
+    } catch (e) { /* ignore */ }
+    return '';
+}
+
+function buildQuizShareGrid(targetPokemon) {
+    const statKeys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+    const historyInOrder = [...quizGuessedList].reverse();
+    const rows = historyInOrder.map(guess => {
+        const cells = statKeys.map(key => {
+            const diff = Math.abs((guess[key] || 0) - (targetPokemon[key] || 0));
+            if (diff === 0) return '🟩';
+            if (diff <= 15) return '🟨';
+            return '⬜';
+        }).join('');
+        const totalIndicator = guess.total < targetPokemon.total
+            ? ' 🔼'
+            : (guess.total > targetPokemon.total ? ' 🔽' : ' 🎯');
+        return `${cells}${totalIndicator}`;
+    });
+    rows.push('🟩🟩🟩🟩🟩🟩');
+    return rows.join('\n');
+}
+
+function buildQuizShareText(targetPokemon, attemptsUsed) {
+    const modeLabel = getQuizShareModeLabel(quizSelectedDifficulty, quizSelectedGens);
+    const attemptLabel = attemptsUsed === 1
+        ? `1/${QUIZ_MAX_ATTEMPTS}回で一発正解！`
+        : `${attemptsUsed}/${QUIZ_MAX_ATTEMPTS}回で正解！`;
+    const grid = buildQuizShareGrid(targetPokemon);
+    const publicUrl = getPublicShareUrl();
+
+    const lines = [
+        'Pokétone 結果 🎵',
+        `${modeLabel}・${attemptLabel}`,
+        '',
+        grid,
+        '',
+        '#Pokétone #ポケモン種族値音あてクイズ'
+    ];
+    if (publicUrl) {
+        lines.push(publicUrl);
+    }
+    return lines.join('\n');
+}
+
+function resetQuizCopyButtonState() {
+    if (_quizShareCopyTimer) {
+        clearTimeout(_quizShareCopyTimer);
+        _quizShareCopyTimer = null;
+    }
+    const btn = document.getElementById('quiz-share-copy-btn');
+    const icon = document.getElementById('quiz-share-copy-icon');
+    const label = document.getElementById('quiz-share-copy-label');
+    if (btn) {
+        btn.className = 'px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-black transition-all border border-slate-200 shadow-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98';
+    }
+    if (icon) {
+        icon.className = 'fa-regular fa-copy';
+    }
+    if (label) {
+        label.textContent = '結果をコピー';
+    }
+}
+
+function renderQuizShareSection(targetPokemon, attemptsUsed) {
+    const section = document.getElementById('quiz-share-section');
+    const preview = document.getElementById('quiz-share-preview');
+    if (!section || !preview || !targetPokemon) return;
+
+    _latestQuizShareText = buildQuizShareText(targetPokemon, attemptsUsed);
+    preview.textContent = _latestQuizShareText;
+    resetQuizCopyButtonState();
+    section.classList.remove('hidden');
+}
+
+function hideQuizShareSection() {
+    _latestQuizShareText = '';
+    resetQuizCopyButtonState();
+    const section = document.getElementById('quiz-share-section');
+    if (section) section.classList.add('hidden');
+}
+
+function shareQuizToX() {
+    if (!_latestQuizShareText) return;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(_latestQuizShareText)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function shareQuizToLine() {
+    if (!_latestQuizShareText) return;
+    const url = `https://line.me/R/share?text=${encodeURIComponent(_latestQuizShareText)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+async function copyQuizShareText() {
+    if (!_latestQuizShareText) return;
+    let copied = false;
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        try {
+            await navigator.clipboard.writeText(_latestQuizShareText);
+            copied = true;
+        } catch (err) {
+            copied = false;
+        }
+    }
+
+    if (!copied) {
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = _latestQuizShareText;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            copied = document.execCommand('copy');
+            document.body.removeChild(textarea);
+        } catch (err) {
+            copied = false;
+        }
+    }
+
+    if (!copied) {
+        alert('クリップボードへのコピーに失敗しました。枠内のテキストを直接選択してコピーしてください。');
+        return;
+    }
+
+    if (_quizShareCopyTimer) {
+        clearTimeout(_quizShareCopyTimer);
+    }
+    const btn = document.getElementById('quiz-share-copy-btn');
+    const icon = document.getElementById('quiz-share-copy-icon');
+    const label = document.getElementById('quiz-share-copy-label');
+    if (btn) {
+        btn.className = 'px-4 py-3 bg-emerald-600 text-white rounded-2xl text-xs font-black transition-all border border-emerald-600 shadow-xs flex items-center justify-center gap-2 cursor-pointer';
+    }
+    if (icon) {
+        icon.className = 'fa-solid fa-check';
+    }
+    if (label) {
+        label.textContent = 'コピーしました！';
+    }
+
+    _quizShareCopyTimer = setTimeout(() => {
+        resetQuizCopyButtonState();
+    }, 2200);
 }
