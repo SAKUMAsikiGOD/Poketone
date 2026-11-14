@@ -435,16 +435,16 @@
                 <!-- JavaScriptにより正解データが動的挿入されます -->
             </div>
 
-            <!-- SNSシェアセクション (正解時のみ表示) -->
+            <!-- SNSシェアセクション (正解時のみ表示・画像シェア) -->
             <div id="quiz-share-section"
                 class="hidden bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col gap-3.5 text-left">
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <span
                             class="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center text-xs">
-                            <i class="fa-solid fa-share-nodes"></i>
+                            <i class="fa-solid fa-image"></i>
                         </span>
-                        <h3 class="text-sm font-black text-slate-800">結果をSNSでシェア</h3>
+                        <h3 class="text-sm font-black text-slate-800">結果を画像でシェア</h3>
                     </div>
                     <span
                         class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
@@ -452,16 +452,23 @@
                     </span>
                 </div>
 
-                <pre id="quiz-share-preview"
-                    class="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80 text-xs text-slate-700 font-mono whitespace-pre-wrap break-words leading-relaxed select-all"></pre>
+                <div class="rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-50 shadow-inner">
+                    <img id="quiz-share-image-preview" alt="Pokétone クイズ結果画像" class="w-full h-auto block">
+                </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button type="button" id="quiz-share-native-btn" onclick="shareQuizImageNative()"
+                    class="hidden w-full px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer hover:scale-101 active:scale-98">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <span>画像ごとシェアする（X・LINE・その他アプリ）</span>
+                </button>
+
+                <div class="grid grid-cols-2 gap-2.5">
                     <button type="button" onclick="shareQuizToX()"
                         class="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98">
                         <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
                         </svg>
-                        <span>Xでシェア</span>
+                        <span>Xで投稿</span>
                     </button>
                     <button type="button" onclick="shareQuizToLine()"
                         class="px-4 py-3 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-2xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98">
@@ -470,12 +477,27 @@
                         </svg>
                         <span>LINEで送る</span>
                     </button>
-                    <button type="button" id="quiz-share-copy-btn" onclick="copyQuizShareText()"
-                        class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-black transition-all border border-slate-200 shadow-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <button type="button" id="quiz-share-copy-btn" onclick="copyQuizShareImage()"
+                        class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-black transition-all border border-slate-200 shadow-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98">
                         <i id="quiz-share-copy-icon" class="fa-regular fa-copy"></i>
-                        <span id="quiz-share-copy-label">結果をコピー</span>
+                        <span id="quiz-share-copy-label">画像をコピー</span>
+                    </button>
+                    <button type="button" onclick="downloadQuizShareImage()"
+                        class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-black transition-all border border-slate-200 shadow-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98">
+                        <i class="fa-solid fa-download"></i>
+                        <span>画像を保存</span>
                     </button>
                 </div>
+
+                <p id="quiz-share-status"
+                    class="hidden text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 leading-relaxed"></p>
+
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                    ※ XやLINEの仕様上、Webページから投稿画面へ画像を自動添付することはできないため、「Xで投稿」時は画像を自動コピーして画面を開きます（投稿欄で貼り付けしてください）。スマホ等では上の「画像ごとシェアする」から画像とURLを直接渡せます。
+                </p>
             </div>
 
             <div class="flex flex-wrap gap-3 justify-center pt-2">
