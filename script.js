@@ -56,7 +56,8 @@ const VALID_MEGA_BASE_IDS = new Set([
     475, 531,
     658, // サトシゲッコウガ (メガゲッコウガ)
     719,
-    780  // メガジジーロン (Pokémon LEGENDS Z-A / PokeAPI)
+    780, // メガジジーロン (Pokémon LEGENDS Z-A / PokeAPI)
+    870  // メガタイレーツ (Pokémon LEGENDS Z-A / PokeAPI)
 ]);
 
 // 全ポケモンの公式アートワーク画像を100%確実に生成・補完する関数
@@ -167,6 +168,7 @@ const EMBEDDED_FALLBACK_POKEMON = [
     { id: 658, baseId: 658, name: "ゲッコウガ", _baseSpeciesName: "ゲッコウガ", formType: "normal", formLabel: "通常", types: ["みず", "あく"], hp: 72, atk: 95, def: 67, spa: 103, spd: 71, spe: 122, total: 530, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/658.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/658.ogg" },
     { id: 706, baseId: 706, name: "ヌメルゴン", _baseSpeciesName: "ヌメルゴン", formType: "normal", formLabel: "通常", types: ["ドラゴン"], hp: 90, atk: 100, def: 70, spa: 110, spd: 150, spe: 80, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/706.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/706.ogg" },
     { id: 780, baseId: 780, name: "ジジーロン", _baseSpeciesName: "ジジーロン", formType: "normal", formLabel: "通常", types: ["ノーマル", "ドラゴン"], hp: 78, atk: 60, def: 85, spa: 135, spd: 91, spe: 36, total: 485, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/780.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/780.ogg" },
+    { id: 870, baseId: 870, name: "タイレーツ", _baseSpeciesName: "タイレーツ", formType: "normal", formLabel: "通常", types: ["かくとう"], hp: 65, atk: 100, def: 100, spa: 70, spd: 60, spe: 75, total: 470, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/870.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/870.ogg" },
     // 公式全メガシンカ (48種) ＋ ゲンシカイキ (2種) ＋ サトシゲッコウガ (1種) ＋ アプリ専用メガメガニウム・メガメガヤンマ (2種)
     { id: 10033, baseId: 3, name: "メガフシギバナ", rawName: "venusaur-mega", _baseSpeciesName: "フシギバナ", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "どく"], hp: 80, atk: 100, def: 123, spa: 122, spd: 120, spe: 80, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10033.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10033.ogg" },
     { id: 10034, baseId: 6, name: "メガリザードンX", rawName: "charizard-mega-x", _baseSpeciesName: "リザードン", formType: "mega", formLabel: "メガシンカX", types: ["ほのお", "ドラゴン"], hp: 78, atk: 130, def: 111, spa: 130, spd: 85, spe: 100, total: 634, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10034.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10034.ogg" },
@@ -221,8 +223,9 @@ const EMBEDDED_FALLBACK_POKEMON = [
     { id: 10075, baseId: 719, name: "メガディアンシー", rawName: "diancie-mega", _baseSpeciesName: "ディアンシー", formType: "mega", formLabel: "メガシンカ", types: ["いわ", "フェアリー"], hp: 50, atk: 160, def: 110, spa: 160, spd: 110, spe: 110, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10075.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10075.ogg" },
     { id: 10282, baseId: 154, name: "メガメガニウム", rawName: "meganium-mega", _baseSpeciesName: "メガニウム", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "フェアリー"], hp: 80, atk: 92, def: 115, spa: 143, spd: 115, spe: 80, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10282.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/154.ogg" },
     { id: 10999, baseId: 469, name: "メガメガヤンマ", rawName: "yanmega-mega", _baseSpeciesName: "メガヤンマ", formType: "mega", formLabel: "メガシンカ", types: ["むし", "ひこう"], hp: 86, atk: 86, def: 96, spa: 156, spd: 76, spe: 115, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/469.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/469.ogg" },
-    // メガシンカZ (Pokémon LEGENDS Z-A) ＆ メガジジーロン
+    // メガシンカZ (Pokémon LEGENDS Z-A) ＆ メガジジーロン・メガタイレーツ
     { id: 10284, baseId: 780, name: "メガジジーロン", rawName: "drampa-mega", _baseSpeciesName: "ジジーロン", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル", "ドラゴン"], hp: 78, atk: 85, def: 110, spa: 160, spd: 116, spe: 36, total: 585, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/780.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/780.ogg" },
+    { id: 10303, baseId: 870, name: "メガタイレーツ", rawName: "falinks-mega", _baseSpeciesName: "タイレーツ", formType: "mega", formLabel: "メガシンカ", types: ["かくとう"], hp: 65, atk: 135, def: 135, spa: 70, spd: 65, spe: 100, total: 570, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10303.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/870.ogg" },
     { id: 10535, baseId: 448, name: "メガルカリオZ", rawName: "lucario-mega-z", _baseSpeciesName: "ルカリオ", formType: "mega", formLabel: "メガシンカZ", types: ["かくとう", "はがね"], hp: 70, atk: 165, def: 78, spa: 155, spd: 70, spe: 122, total: 660, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/448.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/448.ogg" },
     { id: 10536, baseId: 445, name: "メガガブリアスZ", rawName: "garchomp-mega-z", _baseSpeciesName: "ガブリアス", formType: "mega", formLabel: "メガシンカZ", types: ["ドラゴン", "じめん"], hp: 108, atk: 180, def: 105, spa: 130, spd: 95, spe: 112, total: 730, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/445.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/445.ogg" },
     { id: 10537, baseId: 359, name: "メガアブソルZ", rawName: "absol-mega-z", _baseSpeciesName: "アブソル", formType: "mega", formLabel: "メガシンカZ", types: ["あく", "ゴースト"], hp: 65, atk: 160, def: 70, spa: 125, spd: 70, spe: 125, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/359.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/359.ogg" },
@@ -2695,6 +2698,13 @@ function getPokemonAliases(p) {
             aliases.add('ジジーロン(メガシンカ)');
             aliases.add('ジジーロン (メガシンカ)');
         }
+        // タイレーツ（メガタイレーツ）専用エイリアス強化
+        if (baseName === 'タイレーツ') {
+            aliases.add('メガタイレーツ');
+            aliases.add('タイレーツメガ');
+            aliases.add('タイレーツ(メガシンカ)');
+            aliases.add('タイレーツ (メガシンカ)');
+        }
     }
 
     // ゲンシカイキ
@@ -3246,8 +3256,10 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
     }, 400);
 }
 
-// ================= SNSシェア機能 (正解時のみ・ネタバレなし絵文字グリッド) =================
-let _latestQuizShareText = '';
+// ================= SNSシェア機能 (正解時のみ・ネタバレなし画像生成＆シェア) =================
+let _latestQuizShareBlob = null;
+let _latestQuizShareDataUrl = '';
+let _latestQuizShareCaption = '';
 let _quizShareCopyTimer = null;
 
 function getQuizShareModeLabel(difficulty, genSet) {
@@ -3282,45 +3294,333 @@ function getPublicShareUrl() {
     return POKETONE_PUBLIC_URL;
 }
 
-function buildQuizShareGrid(targetPokemon) {
+function buildQuizShareRows(targetPokemon) {
     const statKeys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
     const historyInOrder = [...quizGuessedList].reverse();
     const rows = historyInOrder.map(guess => {
-        const cells = statKeys.map(key => {
+        const statuses = statKeys.map(key => {
             const diff = Math.abs((guess[key] || 0) - (targetPokemon[key] || 0));
-            if (diff === 0) return '🟩';
-            if (diff <= 15) return '🟨';
-            return '⬜';
-        }).join('');
-        const totalIndicator = guess.total < targetPokemon.total
-            ? ' 🔼'
-            : (guess.total > targetPokemon.total ? ' 🔽' : ' 🎯');
-        return `${cells}${totalIndicator}`;
+            if (diff === 0) return 'exact';
+            if (diff <= 15) return 'close';
+            return 'miss';
+        });
+        const totalHint = guess.total < targetPokemon.total
+            ? 'higher'
+            : (guess.total > targetPokemon.total ? 'lower' : 'same');
+        return { statuses, totalHint, isWinRow: false };
     });
-    rows.push('🟩🟩🟩🟩🟩🟩');
-    return rows.join('\n');
+    rows.push({
+        statuses: ['exact', 'exact', 'exact', 'exact', 'exact', 'exact'],
+        totalHint: 'win',
+        isWinRow: true
+    });
+    return rows;
 }
 
-function buildQuizShareText(targetPokemon, attemptsUsed) {
+function buildQuizShareCaption(attemptsUsed) {
     const modeLabel = getQuizShareModeLabel(quizSelectedDifficulty, quizSelectedGens);
-    const attemptLabel = attemptsUsed === 1
-        ? `1/${QUIZ_MAX_ATTEMPTS}回で一発正解！`
-        : `${attemptsUsed}/${QUIZ_MAX_ATTEMPTS}回で正解！`;
-    const grid = buildQuizShareGrid(targetPokemon);
-    const publicUrl = getPublicShareUrl();
+    const attemptText = attemptsUsed === 1
+        ? `1/${QUIZ_MAX_ATTEMPTS}回で一発正解しました！`
+        : `${attemptsUsed}/${QUIZ_MAX_ATTEMPTS}回で正解しました！`;
+    return [
+        `Pokétoneで「${modeLabel}」を${attemptText} 🎵`,
+        '#Pokétone #ポケモン種族値音あてクイズ',
+        getPublicShareUrl()
+    ].join('\n');
+}
 
-    const lines = [
-        'Pokétone 結果 🎵',
-        `${modeLabel}・${attemptLabel}`,
-        '',
-        grid,
-        '',
-        '#Pokétone #ポケモン種族値音あてクイズ'
-    ];
-    if (publicUrl) {
-        lines.push(publicUrl);
+function drawRoundedRectPath(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+function fillRoundedRect(ctx, x, y, w, h, r, fillStyle, strokeStyle = null, lineWidth = 1) {
+    drawRoundedRectPath(ctx, x, y, w, h, r);
+    if (fillStyle) {
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
     }
-    return lines.join('\n');
+    if (strokeStyle) {
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+    }
+}
+
+function drawPokeballLogo(ctx, cx, cy, radius) {
+    // 上半分 (赤)
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, Math.PI, 0, false);
+    ctx.closePath();
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+
+    // 下半分 (白)
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI, false);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // 外枠と中央線
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cx - radius, cy);
+    ctx.lineTo(cx + radius, cy);
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // 中央ボタン
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.34, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+}
+
+function generateQuizResultCanvas(targetPokemon, attemptsUsed) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 675;
+    const ctx = canvas.getContext('2d');
+    const fontFamily = "'Inter', 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', sans-serif";
+
+    // 背景グラデーション
+    const bgGrad = ctx.createLinearGradient(0, 0, 1200, 675);
+    bgGrad.addColorStop(0, '#f1f5f9');
+    bgGrad.addColorStop(1, '#e2e8f0');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1200, 675);
+
+    // 淡い背景アクセント円
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+    ctx.beginPath();
+    ctx.arc(140, 120, 220, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.06)';
+    ctx.beginPath();
+    ctx.arc(1080, 580, 240, 0, Math.PI * 2);
+    ctx.fill();
+
+    // メイン白カード
+    fillRoundedRect(ctx, 28, 28, 1144, 619, 32, '#ffffff', '#cbd5e1', 1.5);
+
+    // ヘッダー: ロゴ + タイトル
+    drawPokeballLogo(ctx, 88, 84, 24);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `900 32px ${fontFamily}`;
+    ctx.fillText('Pokétone', 126, 84);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(292, 68, 2, 32);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = `700 18px ${fontFamily}`;
+    ctx.fillText('ポケモン種族値音あてクイズ', 310, 85);
+
+    // ヘッダー右上: モードバッジ
+    const modeLabel = getQuizShareModeLabel(quizSelectedDifficulty, quizSelectedGens);
+    ctx.font = `800 18px ${fontFamily}`;
+    const modeWidth = Math.ceil(ctx.measureText(modeLabel).width) + 38;
+    const modeX = 1136 - modeWidth;
+    fillRoundedRect(ctx, modeX, 62, modeWidth, 44, 22, '#f8fafc', '#cbd5e1', 1.5);
+    ctx.fillStyle = '#334155';
+    ctx.textAlign = 'center';
+    ctx.fillText(modeLabel, modeX + modeWidth / 2, 85);
+
+    // ヘッダー区切り線
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(64, 134, 1072, 1.5);
+
+    // === 左カラム: クリア結果 + 波形アート + 凡例 ===
+    const clearBadgeText = attemptsUsed === 1 ? '★ ONE SHOT CLEAR!' : '✓ QUIZ CLEAR!';
+    ctx.font = `900 16px ${fontFamily}`;
+    const clearBadgeW = Math.ceil(ctx.measureText(clearBadgeText).width) + 34;
+    fillRoundedRect(ctx, 64, 162, clearBadgeW, 38, 19, '#ecfdf5', '#a7f3d0', 1.5);
+    ctx.fillStyle = '#047857';
+    ctx.textAlign = 'center';
+    ctx.fillText(clearBadgeText, 64 + clearBadgeW / 2, 182);
+
+    // 回数ビッグ数字
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `900 94px ${fontFamily}`;
+    const numStr = String(attemptsUsed);
+    ctx.fillText(numStr, 62, 266);
+    const numW = ctx.measureText(numStr).width;
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = `800 34px ${fontFamily}`;
+    ctx.fillText(`/ ${QUIZ_MAX_ATTEMPTS}`, 62 + numW + 10, 282);
+
+    ctx.fillStyle = '#059669';
+    ctx.font = `900 24px ${fontFamily}`;
+    ctx.fillText(attemptsUsed === 1 ? '1回目で見事一発正解！' : '回目の回答で見事正解！', 64, 326);
+
+    // 音楽波形ビジュアライザボックス
+    fillRoundedRect(ctx, 64, 356, 434, 102, 20, '#0f172a', '#1e293b', 1.5);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `800 13px ${fontFamily}`;
+    ctx.fillText('♪  BASE STAT MELODY', 84, 380);
+
+    const waveHeights = [22, 42, 30, 56, 48, 26, 52, 38, 60, 34, 46, 24, 54, 40, 28, 50, 36, 44, 22, 32];
+    const waveColors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
+    waveHeights.forEach((h, i) => {
+        const barX = 84 + i * 20;
+        const barY = 444 - h;
+        const col = waveColors[Math.floor((i / waveHeights.length) * waveColors.length)];
+        fillRoundedRect(ctx, barX, barY, 11, h, 5, col);
+    });
+
+    // 凡例カード
+    fillRoundedRect(ctx, 64, 474, 434, 92, 18, '#f8fafc', '#e2e8f0', 1.5);
+    const legendItems = [
+        { color: '#10b981', label: '完全一致', x: 84, y: 500 },
+        { color: '#f59e0b', label: '±15以内', x: 214, y: 500 },
+        { color: '#cbd5e1', label: 'それ以外', x: 344, y: 500 }
+    ];
+    legendItems.forEach(item => {
+        fillRoundedRect(ctx, item.x, item.y - 9, 18, 18, 5, item.color);
+        ctx.fillStyle = '#475569';
+        ctx.font = `700 14px ${fontFamily}`;
+        ctx.fillText(item.label, item.x + 26, item.y + 1);
+    });
+
+    ctx.font = `700 13px ${fontFamily}`;
+    ctx.fillStyle = '#0369a1';
+    ctx.fillText('▲ 正解の合計はもっと高い', 84, 540);
+    ctx.fillStyle = '#be123c';
+    ctx.fillText('▼ 正解の合計はもっと低い', 274, 540);
+
+    // === 右カラム: 推測ステップ・カラーブロックグリッド ===
+    const panelX = 532;
+    const panelY = 158;
+    const panelW = 604;
+    const panelH = 408;
+    fillRoundedRect(ctx, panelX, panelY, panelW, panelH, 24, '#f8fafc', '#e2e8f0', 1.5);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = `800 15px ${fontFamily}`;
+    ctx.textAlign = 'left';
+    ctx.fillText('推測ステップ', panelX + 20, panelY + 28);
+
+    const tileW = 54;
+    const tileGap = 10;
+    const gridStartX = panelX + 72;
+    const statLabels = ['H', 'A', 'B', 'C', 'D', 'S'];
+    ctx.fillStyle = '#64748b';
+    ctx.font = `900 14px ${fontFamily}`;
+    ctx.textAlign = 'center';
+    statLabels.forEach((lbl, colIdx) => {
+        const cx = gridStartX + colIdx * (tileW + tileGap) + tileW / 2;
+        ctx.fillText(lbl, cx, panelY + 28);
+    });
+
+    const rows = buildQuizShareRows(targetPokemon);
+    const n = rows.length;
+    const availH = 336;
+    const rowGap = n <= 6 ? 10 : 6;
+    const rowH = Math.min(44, Math.floor((availH - rowGap * (n - 1)) / n));
+    const totalRowsH = rowH * n + rowGap * (n - 1);
+    const startY = panelY + 54 + Math.floor((availH - totalRowsH) / 2);
+    const tileH = Math.min(rowH - 4, 38);
+
+    rows.forEach((row, idx) => {
+        const ry = startY + idx * (rowH + rowGap);
+        if (row.isWinRow) {
+            fillRoundedRect(ctx, panelX + 12, ry - 2, panelW - 24, rowH + 4, 12, '#ecfdf5', '#6ee7b7', 1.5);
+        }
+
+        // 行番号
+        ctx.textAlign = 'center';
+        ctx.fillStyle = row.isWinRow ? '#047857' : '#64748b';
+        ctx.font = `900 ${rowH >= 36 ? 15 : 13}px ${fontFamily}`;
+        ctx.fillText(`#${idx + 1}`, panelX + 42, ry + rowH / 2 + 1);
+
+        // 6タイルの色
+        const tileY = ry + Math.floor((rowH - tileH) / 2);
+        row.statuses.forEach((st, colIdx) => {
+            const tx = gridStartX + colIdx * (tileW + tileGap);
+            const fill = st === 'exact' ? '#10b981' : (st === 'close' ? '#f59e0b' : '#cbd5e1');
+            fillRoundedRect(ctx, tx, tileY, tileW, tileH, 9, fill);
+        });
+
+        // 合計種族値ヒント / 正解バッジ
+        const badgeX = gridStartX + 6 * tileW + 5 * tileGap + 14;
+        const badgeW = 124;
+        const badgeH = Math.min(tileH, 32);
+        const badgeY = ry + Math.floor((rowH - badgeH) / 2);
+
+        let bBg = '#e0f2fe';
+        let bTxt = '#0369a1';
+        let bLabel = '▲ もっと高';
+        if (row.totalHint === 'win') {
+            bBg = '#10b981';
+            bTxt = '#ffffff';
+            bLabel = '★ 正解!';
+        } else if (row.totalHint === 'lower') {
+            bBg = '#ffe4e6';
+            bTxt = '#be123c';
+            bLabel = '▼ もっと低';
+        } else if (row.totalHint === 'same') {
+            bBg = '#d1fae5';
+            bTxt = '#047857';
+            bLabel = '● 合計一致';
+        }
+        fillRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, Math.floor(badgeH / 2), bBg);
+        ctx.fillStyle = bTxt;
+        ctx.font = `900 ${rowH >= 36 ? 13 : 11}px ${fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(bLabel, badgeX + badgeW / 2, badgeY + badgeH / 2 + 1);
+    });
+
+    // フッター帯
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(64, 584, 1072, 1.5);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#475569';
+    ctx.font = `800 17px ${fontFamily}`;
+    ctx.fillText('#Pokétone   #ポケモン種族値音あてクイズ', 64, 616);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#64748b';
+    ctx.font = `700 16px ${fontFamily}`;
+    ctx.fillText(getPublicShareUrl(), 1136, 616);
+
+    return canvas;
+}
+
+function setQuizShareStatus(message) {
+    const statusEl = document.getElementById('quiz-share-status');
+    if (!statusEl) return;
+    if (!message) {
+        statusEl.textContent = '';
+        statusEl.classList.add('hidden');
+        return;
+    }
+    statusEl.textContent = message;
+    statusEl.classList.remove('hidden');
 }
 
 function resetQuizCopyButtonState() {
@@ -3332,77 +3632,169 @@ function resetQuizCopyButtonState() {
     const icon = document.getElementById('quiz-share-copy-icon');
     const label = document.getElementById('quiz-share-copy-label');
     if (btn) {
-        btn.className = 'px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-black transition-all border border-slate-200 shadow-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98';
+        btn.className = 'px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl text-xs font-black transition-all border border-slate-200 shadow-xs flex items-center justify-center gap-2 cursor-pointer hover:scale-102 active:scale-98';
     }
     if (icon) {
         icon.className = 'fa-regular fa-copy';
     }
     if (label) {
-        label.textContent = '結果をコピー';
+        label.textContent = '画像をコピー';
     }
 }
 
-function renderQuizShareSection(targetPokemon, attemptsUsed) {
-    const section = document.getElementById('quiz-share-section');
-    const preview = document.getElementById('quiz-share-preview');
-    if (!section || !preview || !targetPokemon) return;
+function buildNativeSharePayload(file) {
+    const publicUrl = getPublicShareUrl();
+    const textWithUrl = _latestQuizShareCaption || publicUrl;
+    const withUrlPayload = {
+        files: [file],
+        title: 'Pokétone クイズ結果',
+        text: textWithUrl,
+        url: publicUrl
+    };
+    const textOnlyPayload = {
+        files: [file],
+        title: 'Pokétone クイズ結果',
+        text: textWithUrl
+    };
+    if (typeof navigator.canShare === 'function') {
+        try {
+            if (navigator.canShare(withUrlPayload)) return withUrlPayload;
+        } catch (e) { /* fallback below */ }
+        try {
+            if (navigator.canShare(textOnlyPayload)) return textOnlyPayload;
+        } catch (e) { /* fallback below */ }
+    }
+    return textOnlyPayload;
+}
 
-    _latestQuizShareText = buildQuizShareText(targetPokemon, attemptsUsed);
-    preview.textContent = _latestQuizShareText;
+function canUseNativeImageShare(blob) {
+    if (!blob || !navigator.share || typeof navigator.canShare !== 'function') return false;
+    try {
+        const testFile = new File([blob], 'poketone-result.png', { type: 'image/png' });
+        return navigator.canShare({ files: [testFile] });
+    } catch (e) {
+        return false;
+    }
+}
+
+async function renderQuizShareSection(targetPokemon, attemptsUsed) {
+    const section = document.getElementById('quiz-share-section');
+    const previewImg = document.getElementById('quiz-share-image-preview');
+    const nativeBtn = document.getElementById('quiz-share-native-btn');
+    if (!section || !previewImg || !targetPokemon) return;
+
+    _latestQuizShareCaption = buildQuizShareCaption(attemptsUsed);
+    _latestQuizShareBlob = null;
+    _latestQuizShareDataUrl = '';
     resetQuizCopyButtonState();
+    setQuizShareStatus('');
+
+    if (document.fonts && document.fonts.ready) {
+        await Promise.race([
+            document.fonts.ready,
+            new Promise(resolve => setTimeout(resolve, 300))
+        ]);
+    }
+
+    const canvas = generateQuizResultCanvas(targetPokemon, attemptsUsed);
+    _latestQuizShareDataUrl = canvas.toDataURL('image/png');
+    previewImg.src = _latestQuizShareDataUrl;
+
+    _latestQuizShareBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (nativeBtn) {
+        if (canUseNativeImageShare(_latestQuizShareBlob)) {
+            nativeBtn.classList.remove('hidden');
+        } else {
+            nativeBtn.classList.add('hidden');
+        }
+    }
+
     section.classList.remove('hidden');
 }
 
 function hideQuizShareSection() {
-    _latestQuizShareText = '';
+    _latestQuizShareBlob = null;
+    _latestQuizShareDataUrl = '';
+    _latestQuizShareCaption = '';
     resetQuizCopyButtonState();
+    setQuizShareStatus('');
     const section = document.getElementById('quiz-share-section');
     if (section) section.classList.add('hidden');
 }
 
-function shareQuizToX() {
-    if (!_latestQuizShareText) return;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(_latestQuizShareText)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-function shareQuizToLine() {
-    if (!_latestQuizShareText) return;
-    const url = `https://line.me/R/share?text=${encodeURIComponent(_latestQuizShareText)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-async function copyQuizShareText() {
-    if (!_latestQuizShareText) return;
-    let copied = false;
-
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+async function writeShareImageToClipboard() {
+    if (!_latestQuizShareBlob) return false;
+    if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
         try {
-            await navigator.clipboard.writeText(_latestQuizShareText);
-            copied = true;
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': _latestQuizShareBlob })
+            ]);
+            return true;
         } catch (err) {
-            copied = false;
+            return false;
         }
     }
+    return false;
+}
 
-    if (!copied) {
-        try {
-            const textarea = document.createElement('textarea');
-            textarea.value = _latestQuizShareText;
-            textarea.setAttribute('readonly', '');
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            copied = document.execCommand('copy');
-            document.body.removeChild(textarea);
-        } catch (err) {
-            copied = false;
-        }
+async function shareQuizImageNative() {
+    if (!_latestQuizShareBlob || !navigator.share) return;
+    try {
+        const file = new File([_latestQuizShareBlob], 'poketone-result.png', { type: 'image/png' });
+        const payload = buildNativeSharePayload(file);
+        await navigator.share(payload);
+        setQuizShareStatus('画像とURL付き紹介文を共有しました！');
+    } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        setQuizShareStatus('この端末では直接画像シェアを利用できないため、「画像をコピー」または「画像を保存」をお使いください。');
+    }
+}
+
+async function shareQuizToX() {
+    if (!_latestQuizShareCaption) return;
+    const copied = await writeShareImageToClipboard();
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(_latestQuizShareCaption)}`;
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+
+    if (!win) {
+        setQuizShareStatus(
+            copied
+                ? 'リザルト画像をコピーしました。ポップアップがブロックされたため、ブラウザでポップアップを許可して再度お試しください。'
+                : 'ポップアップがブロックされました。ブラウザでポップアップを許可するか、「画像を保存」してXから投稿してください。'
+        );
+        return;
     }
 
+    if (copied) {
+        setQuizShareStatus('リザルト画像をコピーしてからXの投稿画面を開きました！Xの仕様上自動添付されないため、投稿欄で貼り付け（Ctrl+V / ペースト）してください。');
+    } else {
+        setQuizShareStatus('Xの投稿画面を開きました！この環境では画像の自動コピーができないため、「画像を保存」した画像を投稿画面から添付してください。');
+    }
+}
+
+async function shareQuizToLine() {
+    if (!_latestQuizShareCaption) return;
+    const copied = await writeShareImageToClipboard();
+    const url = `https://line.me/R/share?text=${encodeURIComponent(_latestQuizShareCaption)}`;
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+
+    if (!win) {
+        setQuizShareStatus('ポップアップがブロックされました。ブラウザでポップアップを許可するか、「画像を保存」してLINEから送信してください。');
+        return;
+    }
+
+    if (copied) {
+        setQuizShareStatus('リザルト画像をコピーしてからLINEの共有画面を開きました！（画像を添付する場合は貼り付け、または「画像を保存」した画像をお選びください）');
+    } else {
+        setQuizShareStatus('LINEの共有画面を開きました！画像を送信する場合は「画像を保存」した画像を添付してください。');
+    }
+}
+
+async function copyQuizShareImage() {
+    if (!_latestQuizShareBlob) return;
+    const copied = await writeShareImageToClipboard();
     if (!copied) {
-        alert('クリップボードへのコピーに失敗しました。枠内のテキストを直接選択してコピーしてください。');
+        setQuizShareStatus('このブラウザ環境では画像のクリップボードコピーに対応していないため、「画像を保存」をご利用ください。');
         return;
     }
 
@@ -3413,16 +3805,31 @@ async function copyQuizShareText() {
     const icon = document.getElementById('quiz-share-copy-icon');
     const label = document.getElementById('quiz-share-copy-label');
     if (btn) {
-        btn.className = 'px-4 py-3 bg-emerald-600 text-white rounded-2xl text-xs font-black transition-all border border-emerald-600 shadow-xs flex items-center justify-center gap-2 cursor-pointer';
+        btn.className = 'px-4 py-2.5 bg-emerald-600 text-white rounded-2xl text-xs font-black transition-all border border-emerald-600 shadow-xs flex items-center justify-center gap-2 cursor-pointer';
     }
     if (icon) {
         icon.className = 'fa-solid fa-check';
     }
     if (label) {
-        label.textContent = 'コピーしました！';
+        label.textContent = '画像をコピーしました！';
     }
+    setQuizShareStatus('リザルト画像をクリップボードにコピーしました！XやLINE等の投稿欄にそのまま貼り付けできます。');
 
     _quizShareCopyTimer = setTimeout(() => {
         resetQuizCopyButtonState();
     }, 2200);
+}
+
+function downloadQuizShareImage() {
+    if (!_latestQuizShareDataUrl) return;
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const link = document.createElement('a');
+    link.href = _latestQuizShareDataUrl;
+    link.download = `poketone-result-${stamp}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setQuizShareStatus('リザルト画像を保存しました！XやLINEで画像ファイルを選択してそのままシェアできます。');
 }
