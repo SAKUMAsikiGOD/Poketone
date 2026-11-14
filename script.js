@@ -3268,16 +3268,18 @@ function getQuizShareModeLabel(difficulty, genSet) {
     return `${genLabel} ${diffLabel}`;
 }
 
+const POKETONE_PUBLIC_URL = 'https://sakumasikigod.github.io/Poketone/';
+
 function getPublicShareUrl() {
     try {
         const { protocol, hostname, origin, pathname } = window.location;
         const isHttp = (protocol === 'http:' || protocol === 'https:');
         const isLocal = !hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-        if (isHttp && !isLocal) {
+        if (isHttp && !isLocal && hostname !== 'sakumasikigod.github.io') {
             return `${origin}${pathname}`;
         }
     } catch (e) { /* ignore */ }
-    return '';
+    return POKETONE_PUBLIC_URL;
 }
 
 function buildQuizShareGrid(targetPokemon) {
