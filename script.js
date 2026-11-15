@@ -3258,6 +3258,8 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
 
 // ================= SNSシェア機能 (正解時のみ・ネタバレなし画像生成＆シェア) =================
 let _latestQuizShareBlob = null;
+let _latestQuizShareFile = null;
+let _latestQuizSharePayload = null;
 let _latestQuizShareDataUrl = '';
 let _latestQuizShareCaption = '';
 let _quizShareCopyTimer = null;
@@ -3642,6 +3644,16 @@ function resetQuizCopyButtonState() {
     }
 }
 
+function isMobileShareDevice() {
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+        if (navigator.userAgentData.mobile) return true;
+    }
+    const ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
+    if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
+    return false;
+}
+
 function buildNativeSharePayload(file) {
     const publicUrl = getPublicShareUrl();
     const textWithUrl = _latestQuizShareCaption || publicUrl;
@@ -3667,24 +3679,27 @@ function buildNativeSharePayload(file) {
     return textOnlyPayload;
 }
 
-function canUseNativeImageShare(blob) {
-    if (!blob || !navigator.share || typeof navigator.canShare !== 'function') return false;
-    try {
-        const testFile = new File([blob], 'poketone-result.png', { type: 'image/png' });
-        return navigator.canShare({ files: [testFile] });
-    } catch (e) {
-        return false;
+function updateNativeShareButtonVisibility(visible) {
+    const nativeBtn = document.getElementById('quiz-share-native-btn');
+    if (!nativeBtn) return;
+    if (visible) {
+        nativeBtn.classList.remove('hidden');
+        nativeBtn.classList.add('flex');
+    } else {
+        nativeBtn.classList.add('hidden');
+        nativeBtn.classList.remove('flex');
     }
 }
 
 async function renderQuizShareSection(targetPokemon, attemptsUsed) {
     const section = document.getElementById('quiz-share-section');
     const previewImg = document.getElementById('quiz-share-image-preview');
-    const nativeBtn = document.getElementById('quiz-share-native-btn');
     if (!section || !previewImg || !targetPokemon) return;
 
     _latestQuizShareCaption = buildQuizShareCaption(attemptsUsed);
     _latestQuizShareBlob = null;
+    _latestQuizShareFile = null;
+    _latestQuizSharePayload = null;
     _latestQuizShareDataUrl = '';
     resetQuizCopyButtonState();
     setQuizShareStatus('');
@@ -3701,23 +3716,31 @@ async function renderQuizShareSection(targetPokemon, attemptsUsed) {
     previewImg.src = _latestQuizShareDataUrl;
 
     _latestQuizShareBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    if (nativeBtn) {
-        if (canUseNativeImageShare(_latestQuizShareBlob)) {
-            nativeBtn.classList.remove('hidden');
-        } else {
-            nativeBtn.classList.add('hidden');
+    if (_latestQuizShareBlob) {
+        try {
+            _latestQuizShareFile = new File([_latestQuizShareBlob], 'poketone-result.png', { type: 'image/png' });
+            _latestQuizSharePayload = buildNativeSharePayload(_latestQuizShareFile);
+        } catch (e) {
+            _latestQuizShareFile = null;
+            _latestQuizSharePayload = null;
         }
     }
+
+    const canShowNativeBtn = Boolean(_latestQuizShareBlob && typeof navigator.share === 'function');
+    updateNativeShareButtonVisibility(canShowNativeBtn);
 
     section.classList.remove('hidden');
 }
 
 function hideQuizShareSection() {
     _latestQuizShareBlob = null;
+    _latestQuizShareFile = null;
+    _latestQuizSharePayload = null;
     _latestQuizShareDataUrl = '';
     _latestQuizShareCaption = '';
     resetQuizCopyButtonState();
     setQuizShareStatus('');
+    updateNativeShareButtonVisibility(false);
     const section = document.getElementById('quiz-share-section');
     if (section) section.classList.add('hidden');
 }
@@ -3737,57 +3760,87 @@ async function writeShareImageToClipboard() {
     return false;
 }
 
-async function shareQuizImageNative() {
-    if (!_latestQuizShareBlob || !navigator.share) return;
-    try {
-        const file = new File([_latestQuizShareBlob], 'poketone-result.png', { type: 'image/png' });
-        const payload = buildNativeSharePayload(file);
-        await navigator.share(payload);
-        setQuizShareStatus('画像とURL付き紹介文を共有しました！');
-    } catch (err) {
-        if (err && err.name === 'AbortError') return;
-        setQuizShareStatus('この端末では直接画像シェアを利用できないため、「画像をコピー」または「画像を保存」をお使いください。');
-    }
-}
-
-async function shareQuizToX() {
-    if (!_latestQuizShareCaption) return;
+async function openFallbackShareWindow(platform, shareUrl) {
+    const label = platform === 'x' ? 'X' : 'LINE';
+    const screenName = platform === 'x' ? '投稿画面' : '共有画面';
     const copied = await writeShareImageToClipboard();
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(_latestQuizShareCaption)}`;
-    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    const win = window.open(shareUrl, '_blank', 'noopener,noreferrer');
 
     if (!win) {
         setQuizShareStatus(
             copied
-                ? 'リザルト画像をコピーしました。ポップアップがブロックされたため、ブラウザでポップアップを許可して再度お試しください。'
-                : 'ポップアップがブロックされました。ブラウザでポップアップを許可するか、「画像を保存」してXから投稿してください。'
+                ? `リザルト画像をコピーしました。ポップアップがブロックされたため、ブラウザでポップアップを許可して再度お試しください。`
+                : `ポップアップがブロックされました。ブラウザでポップアップを許可するか、「画像を保存」して${label}から共有してください。`
         );
         return;
     }
 
     if (copied) {
-        setQuizShareStatus('リザルト画像をコピーしてからXの投稿画面を開きました！Xの仕様上自動添付されないため、投稿欄で貼り付け（Ctrl+V / ペースト）してください。');
+        setQuizShareStatus(`リザルト画像をコピーしてから${label}の${screenName}を開きました！（この環境では自動添付できないため、${screenName}で貼り付けしてください）`);
     } else {
-        setQuizShareStatus('Xの投稿画面を開きました！この環境では画像の自動コピーができないため、「画像を保存」した画像を投稿画面から添付してください。');
+        setQuizShareStatus(`${label}の${screenName}を開きました！画像を添付する場合は「画像を保存」したリザルト画像をお選びください。`);
     }
 }
 
-async function shareQuizToLine() {
-    if (!_latestQuizShareCaption) return;
-    const copied = await writeShareImageToClipboard();
-    const url = `https://line.me/R/share?text=${encodeURIComponent(_latestQuizShareCaption)}`;
-    const win = window.open(url, '_blank', 'noopener,noreferrer');
-
-    if (!win) {
-        setQuizShareStatus('ポップアップがブロックされました。ブラウザでポップアップを許可するか、「画像を保存」してLINEから送信してください。');
+async function shareQuizImageNative(fallbackPlatform = '') {
+    if (!navigator.share) {
+        if (fallbackPlatform === 'x') {
+            return openFallbackShareWindow('x', `https://twitter.com/intent/tweet?text=${encodeURIComponent(_latestQuizShareCaption)}`);
+        }
+        if (fallbackPlatform === 'line') {
+            return openFallbackShareWindow('line', `https://line.me/R/share?text=${encodeURIComponent(_latestQuizShareCaption)}`);
+        }
+        setQuizShareStatus('お使いのブラウザは Web Share API に非対応のため、「画像をコピー」または「画像を保存」をご利用ください。');
         return;
     }
 
-    if (copied) {
-        setQuizShareStatus('リザルト画像をコピーしてからLINEの共有画面を開きました！（画像を添付する場合は貼り付け、または「画像を保存」した画像をお選びください）');
-    } else {
-        setQuizShareStatus('LINEの共有画面を開きました！画像を送信する場合は「画像を保存」した画像を添付してください。');
+    const payload = _latestQuizSharePayload || (
+        _latestQuizShareFile ? buildNativeSharePayload(_latestQuizShareFile) : {
+            title: 'Pokétone クイズ結果',
+            text: _latestQuizShareCaption,
+            url: getPublicShareUrl()
+        }
+    );
+
+    try {
+        await navigator.share(payload);
+        setQuizShareStatus('共有メニューから画像とURL付き紹介文を共有しました！');
+    } catch (err) {
+        if (err && err.name === 'AbortError') return;
+
+        // files付き共有が拒否された場合（アプリ内ブラウザや一部端末等）
+        if (fallbackPlatform === 'x') {
+            await openFallbackShareWindow('x', `https://twitter.com/intent/tweet?text=${encodeURIComponent(_latestQuizShareCaption)}`);
+            return;
+        }
+        if (fallbackPlatform === 'line') {
+            await openFallbackShareWindow('line', `https://line.me/R/share?text=${encodeURIComponent(_latestQuizShareCaption)}`);
+            return;
+        }
+        setQuizShareStatus('このブラウザ環境では画像の直接共有に対応していないため、「画像をコピー」または「画像を保存」をお使いください。（LINEやX内の簡易ブラウザでは制限される場合があります）');
     }
+}
+
+function shareQuizToX() {
+    if (!_latestQuizShareCaption) return;
+    // スマホ等（Web Share API画像共有対応環境）では即時 navigator.share を起動（awaitを挟まない）
+    if (isMobileShareDevice() && _latestQuizShareFile && typeof navigator.share === 'function') {
+        shareQuizImageNative('x');
+        return;
+    }
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(_latestQuizShareCaption)}`;
+    openFallbackShareWindow('x', url);
+}
+
+function shareQuizToLine() {
+    if (!_latestQuizShareCaption) return;
+    // スマホ等（Web Share API画像共有対応環境）では即時 navigator.share を起動（awaitを挟まない）
+    if (isMobileShareDevice() && _latestQuizShareFile && typeof navigator.share === 'function') {
+        shareQuizImageNative('line');
+        return;
+    }
+    const url = `https://line.me/R/share?text=${encodeURIComponent(_latestQuizShareCaption)}`;
+    openFallbackShareWindow('line', url);
 }
 
 async function copyQuizShareImage() {
