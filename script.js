@@ -1576,6 +1576,27 @@ function playPokemonCrySafe(p) {
     });
 }
 
+let _quizDecisionAudio = null;
+
+function playQuizDecisionSound() {
+    try {
+        if (!_quizDecisionAudio) {
+            _quizDecisionAudio = new Audio('sound/decision.mp3');
+            _quizDecisionAudio.preload = 'auto';
+            _quizDecisionAudio.volume = 0.6;
+        }
+        _quizDecisionAudio.currentTime = 0;
+        const playPromise = _quizDecisionAudio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(err => {
+                console.warn('決定効果音の再生に失敗:', err);
+            });
+        }
+    } catch (err) {
+        console.warn('決定効果音の初期化に失敗:', err);
+    }
+}
+
 function closeDetailModal() {
     const modal = document.getElementById('detail-modal');
     modal.classList.add('opacity-0');
@@ -2963,6 +2984,9 @@ function processQuizAnswer(found) {
         return;
     }
 
+    // 有効な回答時に決定効果音を再生
+    playQuizDecisionSound();
+
     // 1. 完全一致（同ポケモン・フォルム）
     const isExactMatch = (found.id === target.id) ||
         (found.baseId === target.baseId && found.name === target.name);
@@ -2995,12 +3019,16 @@ function processQuizAnswer(found) {
         showSecurityToast('💡 5問ミスにより「正解の鳴き声ヒント」が解放されました！');
     }
 
-    triggerQuizWave(2.4);
-    playStatMelody(found);
-
     if (quizRemainingAttempts <= 0) {
         finishQuiz(false);
+        return;
     }
+
+    setTimeout(() => {
+        if (!quizIsPlaying) return;
+        triggerQuizWave(2.4);
+        playStatMelody(found);
+    }, 350);
 }
 
 function handleQuizSubmit(e) {
