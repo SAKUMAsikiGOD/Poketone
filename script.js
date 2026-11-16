@@ -43,23 +43,6 @@ const typeEnToJp = {
 const POKEBALL_FALLBACK_SVG = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23ef4444' stroke='%231e293b' stroke-width='6'/%3E%3Cpath d='M 4 50 A 46 46 0 0 0 96 50 Z' fill='%23ffffff' stroke='%231e293b' stroke-width='6'/%3E%3Cline x1='4' y1='50' x2='96' y2='50' stroke='%231e293b' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='14' fill='%23ffffff' stroke='%231e293b' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%2394a3b8'/%3E%3C/svg%3E";
 window.POKEBALL_FALLBACK_SVG = POKEBALL_FALLBACK_SVG;
 
-// 公式メガシンカ（48種＋ゲンシカイキ2種＋サトシゲッコウガ＋アプリ専用メガメガニウム・メガメガヤンマ）の baseId リスト
-const VALID_MEGA_BASE_IDS = new Set([
-    3, 6, 9, 15, 18, 65, 80, 94, 115, 127, 130, 142, 150,
-    154, // メガメガニウム
-    181, 208, 212, 214, 229, 248, 254, 257, 260, 282, 302, 303,
-    306, 308, 310, 319, 323, 334, 354, 359, 362, 373, 376,
-    380, 381, 382, 383, 384, 428,
-    445, // メガガブリアス
-    448, 460,
-    469, // メガメガヤンマ
-    475, 531,
-    658, // サトシゲッコウガ (メガゲッコウガ)
-    719,
-    780, // メガジジーロン (Pokémon LEGENDS Z-A / PokeAPI)
-    870  // メガタイレーツ (Pokémon LEGENDS Z-A / PokeAPI)
-]);
-
 // 全ポケモンの公式アートワーク画像を100%確実に生成・補完する関数
 function getPokemonImageUrl(p) {
     if (!p) return POKEBALL_FALLBACK_SVG;
@@ -169,6 +152,7 @@ const EMBEDDED_FALLBACK_POKEMON = [
     { id: 706, baseId: 706, name: "ヌメルゴン", _baseSpeciesName: "ヌメルゴン", formType: "normal", formLabel: "通常", types: ["ドラゴン"], hp: 90, atk: 100, def: 70, spa: 110, spd: 150, spe: 80, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/706.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/706.ogg" },
     { id: 780, baseId: 780, name: "ジジーロン", _baseSpeciesName: "ジジーロン", formType: "normal", formLabel: "通常", types: ["ノーマル", "ドラゴン"], hp: 78, atk: 60, def: 85, spa: 135, spd: 91, spe: 36, total: 485, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/780.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/780.ogg" },
     { id: 870, baseId: 870, name: "タイレーツ", _baseSpeciesName: "タイレーツ", formType: "normal", formLabel: "通常", types: ["かくとう"], hp: 65, atk: 100, def: 100, spa: 70, spd: 60, spe: 75, total: 470, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/870.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/870.ogg" },
+    { id: 998, baseId: 998, name: "セグレイブ", _baseSpeciesName: "セグレイブ", formType: "normal", formLabel: "通常", types: ["ドラゴン", "こおり"], hp: 115, atk: 145, def: 92, spa: 75, spd: 86, spe: 87, total: 600, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/998.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/998.ogg" },
     // 公式全メガシンカ (48種) ＋ ゲンシカイキ (2種) ＋ サトシゲッコウガ (1種) ＋ アプリ専用メガメガニウム・メガメガヤンマ (2種)
     { id: 10033, baseId: 3, name: "メガフシギバナ", rawName: "venusaur-mega", _baseSpeciesName: "フシギバナ", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "どく"], hp: 80, atk: 100, def: 123, spa: 122, spd: 120, spe: 80, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10033.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10033.ogg" },
     { id: 10034, baseId: 6, name: "メガリザードンX", rawName: "charizard-mega-x", _baseSpeciesName: "リザードン", formType: "mega", formLabel: "メガシンカX", types: ["ほのお", "ドラゴン"], hp: 78, atk: 130, def: 111, spa: 130, spd: 85, spe: 100, total: 634, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10034.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10034.ogg" },
@@ -223,12 +207,13 @@ const EMBEDDED_FALLBACK_POKEMON = [
     { id: 10075, baseId: 719, name: "メガディアンシー", rawName: "diancie-mega", _baseSpeciesName: "ディアンシー", formType: "mega", formLabel: "メガシンカ", types: ["いわ", "フェアリー"], hp: 50, atk: 160, def: 110, spa: 160, spd: 110, spe: 110, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10075.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10075.ogg" },
     { id: 10282, baseId: 154, name: "メガメガニウム", rawName: "meganium-mega", _baseSpeciesName: "メガニウム", formType: "mega", formLabel: "メガシンカ", types: ["くさ", "フェアリー"], hp: 80, atk: 92, def: 115, spa: 143, spd: 115, spe: 80, total: 625, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10282.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/154.ogg" },
     { id: 10999, baseId: 469, name: "メガメガヤンマ", rawName: "yanmega-mega", _baseSpeciesName: "メガヤンマ", formType: "mega", formLabel: "メガシンカ", types: ["むし", "ひこう"], hp: 86, atk: 86, def: 96, spa: 156, spd: 76, spe: 115, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/469.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/469.ogg" },
-    // メガシンカZ (Pokémon LEGENDS Z-A) ＆ メガジジーロン・メガタイレーツ
-    { id: 10284, baseId: 780, name: "メガジジーロン", rawName: "drampa-mega", _baseSpeciesName: "ジジーロン", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル", "ドラゴン"], hp: 78, atk: 85, def: 110, spa: 160, spd: 116, spe: 36, total: 585, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/780.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/780.ogg" },
+    // 最新メガシンカ (Pokémon LEGENDS Z-A ＆ DLC)
+    { id: 10302, baseId: 780, name: "メガジジーロン", rawName: "drampa-mega", _baseSpeciesName: "ジジーロン", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル", "ドラゴン"], hp: 78, atk: 85, def: 110, spa: 160, spd: 116, spe: 36, total: 585, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10302.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/780.ogg" },
     { id: 10303, baseId: 870, name: "メガタイレーツ", rawName: "falinks-mega", _baseSpeciesName: "タイレーツ", formType: "mega", formLabel: "メガシンカ", types: ["かくとう"], hp: 65, atk: 135, def: 135, spa: 70, spd: 65, spe: 100, total: 570, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10303.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/870.ogg" },
-    { id: 10535, baseId: 448, name: "メガルカリオZ", rawName: "lucario-mega-z", _baseSpeciesName: "ルカリオ", formType: "mega", formLabel: "メガシンカZ", types: ["かくとう", "はがね"], hp: 70, atk: 165, def: 78, spa: 155, spd: 70, spe: 122, total: 660, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/448.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/448.ogg" },
-    { id: 10536, baseId: 445, name: "メガガブリアスZ", rawName: "garchomp-mega-z", _baseSpeciesName: "ガブリアス", formType: "mega", formLabel: "メガシンカZ", types: ["ドラゴン", "じめん"], hp: 108, atk: 180, def: 105, spa: 130, spd: 95, spe: 112, total: 730, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/445.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/445.ogg" },
-    { id: 10537, baseId: 359, name: "メガアブソルZ", rawName: "absol-mega-z", _baseSpeciesName: "アブソル", formType: "mega", formLabel: "メガシンカZ", types: ["あく", "ゴースト"], hp: 65, atk: 160, def: 70, spa: 125, spd: 70, spe: 125, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/359.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/359.ogg" },
+    { id: 10307, baseId: 359, name: "メガアブソルZ", rawName: "absol-mega-z", _baseSpeciesName: "アブソル", formType: "mega", formLabel: "メガシンカZ", types: ["あく", "ゴースト"], hp: 65, atk: 160, def: 70, spa: 125, spd: 70, spe: 125, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10307.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/359.ogg" },
+    { id: 10309, baseId: 445, name: "メガガブリアスZ", rawName: "garchomp-mega-z", _baseSpeciesName: "ガブリアス", formType: "mega", formLabel: "メガシンカZ", types: ["ドラゴン", "じめん"], hp: 108, atk: 180, def: 105, spa: 130, spd: 95, spe: 112, total: 730, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10309.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/445.ogg" },
+    { id: 10310, baseId: 448, name: "メガルカリオZ", rawName: "lucario-mega-z", _baseSpeciesName: "ルカリオ", formType: "mega", formLabel: "メガシンカZ", types: ["かくとう", "はがね"], hp: 70, atk: 165, def: 78, spa: 155, spd: 70, spe: 122, total: 660, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10310.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/448.ogg" },
+    { id: 10325, baseId: 998, name: "メガセグレイブ", rawName: "baxcalibur-mega", _baseSpeciesName: "セグレイブ", formType: "mega", formLabel: "メガシンカ", types: ["ドラゴン", "こおり"], hp: 115, atk: 175, def: 117, spa: 105, spd: 101, spe: 87, total: 700, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10325.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/998.ogg" },
     { id: 10538, baseId: 6, name: "メガリザードンZ", rawName: "charizard-mega-z", _baseSpeciesName: "リザードン", formType: "mega", formLabel: "メガシンカZ", types: ["ほのお", "ドラゴン"], hp: 78, atk: 120, def: 95, spa: 165, spd: 110, spe: 106, total: 674, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/6.ogg" },
     { id: 10539, baseId: 150, name: "メガミュウツーZ", rawName: "mewtwo-mega-z", _baseSpeciesName: "ミュウツー", formType: "mega", formLabel: "メガシンカZ", types: ["エスパー", "ゴースト"], hp: 106, atk: 160, def: 90, spa: 180, spd: 110, spe: 134, total: 780, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/150.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/150.ogg" },
     // 全リージョンフォーム (アローラ・ガラル・ヒスイ・パルデア)
@@ -396,13 +381,6 @@ function shouldExcludePokemon(rawName, id, baseId) {
     // 17.5 ゲッコウガの重複形態（きずなへんげ準備形態 ID 10116）の除外（種族値530で通常ゲッコウガと同一のため除外。種族値640のサトシゲッコウガ ID 10117 は許可）
     if (n.includes('greninja-battle-bond') || id === 10116) {
         return true;
-    }
-
-    // 18. メガシンカの妥当性チェック（VALID_MEGA_BASE_IDSに含まれる公式メガシンカ＋メガジジーロン等を許可）
-    if (n.includes('-mega') || n.includes('-primal')) {
-        if (baseId && !VALID_MEGA_BASE_IDS.has(baseId)) {
-            return true;
-        }
     }
 
     return false;
@@ -703,11 +681,14 @@ function checkAllGensPresent(list) {
 let isRecoveringData = false;
 
 async function fetchOptimizedPokemonData(forceRefresh = false) {
-    const CACHE_KEY = 'poketone_clean_v11';
+    const CACHE_KEY = 'poketone_clean_v12';
+    const SYNC_FLAG_KEY = 'poketone_mega_sync_v12';
+    let isBackgroundDiffSync = false;
 
     // 1. 既存キャッシュの探索 (forceRefresh でない場合のみ)
     if (!forceRefresh) {
-        const cached = localStorage.getItem('poketone_clean_v11') ||
+        const cached = localStorage.getItem(CACHE_KEY) ||
+            localStorage.getItem('poketone_clean_v11') ||
             localStorage.getItem('poketone_clean_v10') ||
             localStorage.getItem('poketone_clean_v9') ||
             localStorage.getItem('poketone_clean_v8') ||
@@ -724,8 +705,11 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
             try {
                 const rawList = JSON.parse(cached);
                 if (Array.isArray(rawList) && rawList.length > 0) {
+                    const legacyPlaceholderIds = new Set([10535, 10536, 10537]);
                     let cleanedList = rawList
                         .filter(p => p && (p.name || p.rawName))
+                        .filter(p => !(p.id === 10284 && p.rawName === 'drampa-mega'))
+                        .filter(p => !legacyPlaceholderIds.has(p.id))
                         .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
                         .map(p => {
                             // ID 10165 はヤドラン (ガラルのすがた) であるべき
@@ -778,9 +762,9 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
                             return p;
                         });
 
-                    // 必須のフォールバックポケモン（全リージョンフォーム等）で欠けているものを補充
+                    // 必須のフォールバックポケモン（最新メガシンカ・全リージョンフォーム等）で欠けているものを補充
                     EMBEDDED_FALLBACK_POKEMON.forEach(fb => {
-                        if (!cleanedList.some(p => p.id === fb.id)) {
+                        if (!cleanedList.some(p => p.id === fb.id || (fb.rawName && p.rawName === fb.rawName))) {
                             cleanedList.push(fb);
                         }
                     });
@@ -797,8 +781,7 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
 
                     // キャッシュを最新キーに同期保存
                     try {
-                        localStorage.setItem('poketone_clean_v10', JSON.stringify(pokemonList));
-                        localStorage.setItem('poketone_clean_v11', JSON.stringify(pokemonList));
+                        localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
                     } catch (e) { }
 
                     updateLoadedCount();
@@ -807,14 +790,18 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
                     if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
                     if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
 
-                    // キャッシュ完全性チェック（1000件以上かつ全世代揃っているか）
+                    // キャッシュ完全性チェック（1000件以上かつ全世代揃っており、最新メガ同期済みなら即終了）
                     const isComplete = (pokemonList.length >= 1000) && checkAllGensPresent(pokemonList);
-                    if (isComplete) {
+                    const hasSyncedLatestMegas = localStorage.getItem(SYNC_FLAG_KEY) === 'true';
+                    if (isComplete && hasSyncedLatestMegas) {
                         const banner = document.getElementById('loading-banner');
                         if (banner) banner.classList.add('hidden');
                         updateLoadedCount();
                         console.log("Loaded " + pokemonList.length + " pokemon from cache successfully (Complete data).");
                         return;
+                    } else if (isComplete) {
+                        isBackgroundDiffSync = true;
+                        console.log("Loaded cached data (" + pokemonList.length + "). Checking PokeAPI in background for new mega evolutions...");
                     } else {
                         console.warn("Cached data is incomplete (" + pokemonList.length + " pokemon). Auto-continuing background sync from PokeAPI...");
                     }
@@ -826,10 +813,14 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
     } else {
         console.log("Force refresh requested. Clearing cache and fetching fresh data from PokeAPI...");
         try {
-            localStorage.removeItem('poketone_clean_v8');
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem('poketone_clean_v11');
+            localStorage.removeItem('poketone_clean_v10');
             localStorage.removeItem('poketone_clean_v9');
+            localStorage.removeItem('poketone_clean_v8');
             localStorage.removeItem('poketone_clean_v7');
             localStorage.removeItem('poketone_cache_complete');
+            localStorage.removeItem(SYNC_FLAG_KEY);
         } catch (e) { }
     }
 
@@ -848,16 +839,17 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
     // 2. ネットワーク経由での取得（未取得分の差分取得または再同期）
     try {
         const loadingBanner = document.getElementById('loading-banner');
-        if (loadingBanner) loadingBanner.classList.remove('hidden');
         const loadingText = document.getElementById('loading-text');
-        if (loadingText) loadingText.textContent = "PokeAPIから全ポケモンデータを取得・同期中...（そのままプレイ可能です）";
+        if (!isBackgroundDiffSync) {
+            if (loadingBanner) loadingBanner.classList.remove('hidden');
+            if (loadingText) loadingText.textContent = "PokeAPIから全ポケモンデータを取得・同期中...（そのままプレイ可能です）";
+        }
 
         const controller = new AbortController();
         const timeoutMs = forceRefresh ? 15000 : 7000;
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=10000', { signal: controller.signal });
-        clearTimeout(timeoutId);
         clearTimeout(timeoutId);
 
         if (!res.ok) throw new Error('PokeAPI response not OK');
@@ -881,16 +873,25 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
             }
         });
 
+        // まだ取得していない差分ポケモンだけを抽出（既存分でconsecutiveErrorsが誤カウントされるのを防ぐ）
+        const itemsToFetch = allItems.filter(item => {
+            const idMatch = item.url.match(/\/pokemon\/(\d+)\//);
+            const id = idMatch ? parseInt(idMatch[1]) : 0;
+            if (!id) return false;
+            const existingIndex = loaded.findIndex(p => p.id === id);
+            return !(existingIndex > -1 && loaded[existingIndex].formType);
+        });
+
         const batchSize = 25;
         let consecutiveErrors = 0;
 
-        for (let i = 0; i < allItems.length; i += batchSize) {
+        for (let i = 0; i < itemsToFetch.length; i += batchSize) {
             if (consecutiveErrors >= 3) {
                 console.warn("Too many network errors, stopping PokeAPI fetch and using current loaded pokemon.");
                 break;
             }
 
-            const batch = allItems.slice(i, i + batchSize);
+            const batch = itemsToFetch.slice(i, i + batchSize);
             let batchSuccessCount = 0;
 
             const promises = batch.map(async (item) => {
@@ -898,9 +899,6 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
                 const id = idMatch ? parseInt(idMatch[1]) : 0;
                 if (!id) return;
                 if (shouldExcludePokemon(item.name, id)) return;
-
-                const existingIndex = loaded.findIndex(p => p.id === id);
-                if (existingIndex > -1 && loaded[existingIndex].formType) return;
 
                 try {
                     const pRes = await fetch(item.url);
@@ -972,8 +970,9 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
                         cry
                     };
 
-                    if (existingIndex > -1) {
-                        loaded[existingIndex] = pokemonObj;
+                    const existingIdx = loaded.findIndex(p => p.id === id || (p.rawName && p.rawName === pData.name));
+                    if (existingIdx > -1) {
+                        loaded[existingIdx] = pokemonObj;
                     } else {
                         loaded.push(pokemonObj);
                     }
@@ -999,27 +998,32 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
 
             // バッチごとに進捗を保存（途中でリロードしても続きから再開可能に）
             try {
-                localStorage.setItem('poketone_clean_v10', JSON.stringify(pokemonList));
-                localStorage.setItem('poketone_clean_v11', JSON.stringify(pokemonList));
+                localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
             } catch (e) { }
 
             updateLoadedCount();
             updateFormCounts();
             filterAndRenderPokemon();
 
-            const percent = Math.min(100, Math.round((pokemonList.length / allItems.length) * 100));
-            const pBar = document.getElementById('loading-progress');
-            if (pBar) pBar.style.width = percent + '%';
+            if (!isBackgroundDiffSync) {
+                const percent = Math.min(100, Math.round((pokemonList.length / allItems.length) * 100));
+                const pBar = document.getElementById('loading-progress');
+                if (pBar) pBar.style.width = percent + '%';
+            }
         }
 
-        // 全件の取得が完了した場合のみ、完全キャッシュ完了フラグをセット
-        if (pokemonList.length >= 1000) {
+        // 全件の取得が完了した場合のみ、完全キャッシュ完了フラグと最新メガ同期フラグをセット
+        if (pokemonList.length >= 1000 && consecutiveErrors < 3) {
             try {
                 localStorage.setItem('poketone_cache_complete', 'true');
-                localStorage.setItem('poketone_clean_v11', JSON.stringify(pokemonList));
+                localStorage.setItem(SYNC_FLAG_KEY, 'true');
+                localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
             } catch (e) { }
             console.log("Full sync complete! Total loaded:", pokemonList.length);
         }
+
+        if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
+        if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
 
         const banner = document.getElementById('loading-banner');
         if (banner) banner.classList.add('hidden');
@@ -1529,7 +1533,7 @@ function playPokemonCry(url) {
     });
 }
 
-function playPokemonCrySafe(p) {
+function playPokemonCrySafe(p, allowBaseFallback = false) {
     if (!p) return;
 
     const isSpecialForm = (p.id > 1025) || (p.formType && p.formType !== 'normal');
@@ -1554,7 +1558,17 @@ function playPokemonCrySafe(p) {
             // 専用音源の再生成功！
         }).catch(err => {
             console.warn(`専用鳴き声の再生に失敗 (${formCryUrl}):`, err);
-            // 元のポケモンの鳴き声にはフォールバックせず、未対応通知を表示
+            if (allowBaseFallback && p.baseId && p.baseId !== p.id) {
+                const baseCryUrl = `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${p.baseId}.ogg`;
+                const baseAudio = new Audio(baseCryUrl);
+                baseAudio.volume = 0.6;
+                baseAudio.play().catch(baseErr => {
+                    console.warn(`通常種の鳴き声再生にも失敗 (${baseCryUrl}):`, baseErr);
+                    showAlert(`「${p.name}」の鳴き声には対応していません。`);
+                });
+                return;
+            }
+            // クイズヒント等では専用音源がない場合は未対応通知を表示
             showAlert(`「${p.name}」の専用鳴き声には対応していません。`);
         });
         return;
@@ -1577,23 +1591,54 @@ function playPokemonCrySafe(p) {
 }
 
 let _quizDecisionAudio = null;
+let _quizDecisionFallbackTimer = null;
 
-function playQuizDecisionSound() {
+function playQuizDecisionSound(onFinished = null) {
+    if (_quizDecisionFallbackTimer) {
+        clearTimeout(_quizDecisionFallbackTimer);
+        _quizDecisionFallbackTimer = null;
+    }
+
+    let finishedCalled = false;
+    const finishOnce = () => {
+        if (finishedCalled) return;
+        finishedCalled = true;
+        if (_quizDecisionFallbackTimer) {
+            clearTimeout(_quizDecisionFallbackTimer);
+            _quizDecisionFallbackTimer = null;
+        }
+        if (typeof onFinished === 'function') {
+            onFinished();
+        }
+    };
+
     try {
         if (!_quizDecisionAudio) {
             _quizDecisionAudio = new Audio('sound/decision.mp3');
             _quizDecisionAudio.preload = 'auto';
             _quizDecisionAudio.volume = 0.6;
         }
+        _quizDecisionAudio.onended = finishOnce;
+        _quizDecisionAudio.onerror = finishOnce;
         _quizDecisionAudio.currentTime = 0;
+
         const playPromise = _quizDecisionAudio.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(err => {
+        if (playPromise && typeof playPromise.then === 'function') {
+            playPromise.then(() => {
+                const durationMs = Number.isFinite(_quizDecisionAudio.duration) && _quizDecisionAudio.duration > 0
+                    ? Math.ceil(_quizDecisionAudio.duration * 1000) + 150
+                    : 3000;
+                _quizDecisionFallbackTimer = setTimeout(finishOnce, durationMs);
+            }).catch(err => {
                 console.warn('決定効果音の再生に失敗:', err);
+                finishOnce();
             });
+        } else {
+            _quizDecisionFallbackTimer = setTimeout(finishOnce, 1200);
         }
     } catch (err) {
         console.warn('決定効果音の初期化に失敗:', err);
+        finishOnce();
     }
 }
 
@@ -1848,45 +1893,7 @@ function showSecurityToast(message) {
     }, 2800);
 }
 
-// 1. 開発者ツールショートカット (F12, Ctrl+Shift+I/J/C, Ctrl+U) のブロック
-window.addEventListener('keydown', (e) => {
-    if (!quizIsPlaying) return;
-
-    // F12キー
-    if (e.key === 'F12' || e.keyCode === 123) {
-        e.preventDefault();
-        e.stopPropagation();
-        showSecurityToast('🛡️ クイズ中は開発者ツール (F12) の起動は禁止されています');
-        return false;
-    }
-
-    // Ctrl + Shift + I/J/C (インスペクター・コンソール・要素検証)
-    if (e.ctrlKey && e.shiftKey && (['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key) || [73, 74, 67].includes(e.keyCode))) {
-        e.preventDefault();
-        e.stopPropagation();
-        showSecurityToast('🛡️ クイズ中は開発者ツールのショートカットは無効化されています');
-        return false;
-    }
-
-    // Ctrl + U (ソース表示)
-    if (e.ctrlKey && (['U', 'u'].includes(e.key) || e.keyCode === 85)) {
-        e.preventDefault();
-        e.stopPropagation();
-        showSecurityToast('🛡️ クイズ中はソース表示は無効化されています');
-        return false;
-    }
-}, true);
-
-// 2. 右クリック (コンテキストメニュー・検証) のブロック
-window.addEventListener('contextmenu', (e) => {
-    if (quizIsPlaying) {
-        e.preventDefault();
-        showSecurityToast('🛡️ クイズ中は右クリック（要素検証メニュー）は無効化されています');
-        return false;
-    }
-}, true);
-
-// 3. 別タブ・別ウィンドウ・画面離脱（カンニング）の検知・ペナルティ
+// 別タブ・別ウィンドウ・画面離脱（カンニング）の検知・ペナルティ
 let quizBlurCount = 0;
 let isShowingBlurWarning = false;
 
@@ -2726,6 +2733,13 @@ function getPokemonAliases(p) {
             aliases.add('タイレーツ(メガシンカ)');
             aliases.add('タイレーツ (メガシンカ)');
         }
+        // セグレイブ（メガセグレイブ）専用エイリアス強化
+        if (baseName === 'セグレイブ') {
+            aliases.add('メガセグレイブ');
+            aliases.add('セグレイブメガ');
+            aliases.add('セグレイブ(メガシンカ)');
+            aliases.add('セグレイブ (メガシンカ)');
+        }
     }
 
     // ゲンシカイキ
@@ -2984,9 +2998,6 @@ function processQuizAnswer(found) {
         return;
     }
 
-    // 有効な回答時に決定効果音を再生
-    playQuizDecisionSound();
-
     // 1. 完全一致（同ポケモン・フォルム）
     const isExactMatch = (found.id === target.id) ||
         (found.baseId === target.baseId && found.name === target.name);
@@ -3019,16 +3030,12 @@ function processQuizAnswer(found) {
         showSecurityToast('💡 5問ミスにより「正解の鳴き声ヒント」が解放されました！');
     }
 
+    triggerQuizWave(2.4);
+    playStatMelody(found);
+
     if (quizRemainingAttempts <= 0) {
         finishQuiz(false);
-        return;
     }
-
-    setTimeout(() => {
-        if (!quizIsPlaying) return;
-        triggerQuizWave(2.4);
-        playStatMelody(found);
-    }, 350);
 }
 
 function handleQuizSubmit(e) {
@@ -3262,26 +3269,38 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
                     <div><span class="text-slate-400 block">S</span><strong class="text-slate-800 font-bold">${p.spe}</strong></div>
                 </div>
             </div>
-            <div class="flex gap-2.5 mt-2">
+            <div class="flex flex-wrap gap-2.5 mt-2">
                 <button type="button" onclick="playStatMelody(_revealedQuizTarget || _secretQuizTarget)"
                     class="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-music"></i>
                     <span>メロディをもう一度聴く</span>
                 </button>
+                ${isWin ? `
+                <button type="button" onclick="playPokemonCrySafe(_revealedQuizTarget || _secretQuizTarget, true)"
+                    class="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-volume-high"></i>
+                    <span>鳴き声を聴く</span>
+                </button>
+                ` : ''}
             </div>
         </div>
     `;
 
     if (isWin) {
         renderQuizShareSection(p, attemptsUsed);
+        playQuizDecisionSound(() => {
+            if (!quizIsPlaying && !resultScreen.classList.contains('hidden')) {
+                triggerQuizWave(2.6);
+                playStatMelody(p);
+            }
+        });
     } else {
         hideQuizShareSection();
+        setTimeout(() => {
+            triggerQuizWave(2.6);
+            playStatMelody(p);
+        }, 400);
     }
-
-    setTimeout(() => {
-        triggerQuizWave(2.6);
-        playStatMelody(p);
-    }, 400);
 }
 
 // ================= SNSシェア機能 (正解時のみ・ネタバレなし画像生成＆シェア) =================
