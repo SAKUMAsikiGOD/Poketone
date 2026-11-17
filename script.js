@@ -1590,56 +1590,212 @@ function playPokemonCrySafe(p, allowBaseFallback = false) {
     });
 }
 
-let _quizDecisionAudio = null;
-let _quizDecisionFallbackTimer = null;
+let _sharedAudioCtx = null;
+let _audioUnlocked = false;
 
-function playQuizDecisionSound(onFinished = null) {
-    if (_quizDecisionFallbackTimer) {
-        clearTimeout(_quizDecisionFallbackTimer);
-        _quizDecisionFallbackTimer = null;
+const SOUND_EFFECT_CONFIG = {
+    decision: { src: 'sound/decision.mp3', volume: 0.85, defaultDurationMs: 3000 },
+    answer: { src: 'sound/answer.mp3', volume: 0.85, defaultDurationMs: 800 }
+};
+
+const _soundEffectStates = {
+    decision: { audio: null, buffer: null, loading: false, fallbackTimer: null },
+    answer: { audio: null, buffer: null, loading: false, fallbackTimer: null }
+};
+
+function getSharedAudioContext() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!_sharedAudioCtx || _sharedAudioCtx.state === 'closed') {
+        _sharedAudioCtx = new AudioCtx();
+    }
+    return _sharedAudioCtx;
+}
+
+function preloadSoundEffectBuffer(key, ctx) {
+    const cfg = SOUND_EFFECT_CONFIG[key];
+    const st = _soundEffectStates[key];
+    if (!cfg || !st || st.buffer || st.loading || !ctx) return;
+    if (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') {
+        return; // file:// では fetch が CORS でブロックされるため <audio> のみ使用
+    }
+    st.loading = true;
+    fetch(cfg.src)
+        .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.arrayBuffer();
+        })
+        .then(buf => ctx.decodeAudioData(buf))
+        .then(decoded => {
+            st.buffer = decoded;
+        })
+        .catch(err => {
+            console.warn(`効果音(${cfg.src})のWebAudioプリロードをスキップ:`, err);
+        })
+        .finally(() => {
+            st.loading = false;
+        });
+}
+
+function preloadHtmlAudioElement(key) {
+    const cfg = SOUND_EFFECT_CONFIG[key];
+    const st = _soundEffectStates[key];
+    if (!cfg || !st || st.audio) return;
+    try {
+        const audio = new Audio(cfg.src);
+        audio.preload = 'auto';
+        audio.volume = cfg.volume;
+        audio.load();
+        st.audio = audio;
+    } catch (e) { /* ignore */ }
+}
+
+function unlockAudioPlayback() {
+    try {
+        const ctx = getSharedAudioContext();
+        if (ctx) {
+            if (ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+            if (!_audioUnlocked) {
+                // iOS Safari等で非同期コールバック内(setTimeout / onended)のAudioContext再生を有効化するための無音アンロック
+                const buffer = ctx.createBuffer(1, 1, 22050);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(ctx.destination);
+                source.start(0);
+                _audioUnlocked = true;
+            }
+            Object.keys(SOUND_EFFECT_CONFIG).forEach(key => preloadSoundEffectBuffer(key, ctx));
+        }
+    } catch (e) { /* ignore */ }
+
+    Object.keys(SOUND_EFFECT_CONFIG).forEach(key => preloadHtmlAudioElement(key));
+}
+
+document.addEventListener('pointerdown', unlockAudioPlayback, { once: true, passive: true });
+document.addEventListener('keydown', unlockAudioPlayback, { once: true, passive: true });
+
+function resetStatMelodyState() {
+    if (window.activeAudioTimeout) {
+        clearTimeout(window.activeAudioTimeout);
+        window.activeAudioTimeout = null;
+    }
+    isPlayingAudio = false;
+    document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
+    const totalDisp = document.getElementById('total-stat-display');
+    if (totalDisp) totalDisp.classList.remove('scale-125', 'text-red-700');
+    const btn = document.getElementById('play-melody-btn');
+    if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+    }
+}
+
+function playSoundEffectHtmlAudio(key, finishOnce) {
+    const cfg = SOUND_EFFECT_CONFIG[key];
+    const st = _soundEffectStates[key];
+    if (!cfg || !st) {
+        finishOnce();
+        return;
+    }
+    try {
+        if (!st.audio) {
+            st.audio = new Audio(cfg.src);
+            st.audio.preload = 'auto';
+            st.audio.volume = cfg.volume;
+        }
+        st.audio.onended = finishOnce;
+        st.audio.onerror = finishOnce;
+        if (st.audio.readyState > 0) {
+            st.audio.currentTime = 0;
+        }
+
+        const playPromise = st.audio.play();
+        if (playPromise && typeof playPromise.then === 'function') {
+            playPromise.then(() => {
+                const durationMs = Number.isFinite(st.audio.duration) && st.audio.duration > 0
+                    ? Math.ceil(st.audio.duration * 1000) + 150
+                    : cfg.defaultDurationMs;
+                st.fallbackTimer = setTimeout(finishOnce, durationMs);
+            }).catch(err => {
+                console.warn(`効果音(${cfg.src})の再生に失敗:`, err);
+                finishOnce();
+            });
+        } else {
+            st.fallbackTimer = setTimeout(finishOnce, cfg.defaultDurationMs);
+        }
+    } catch (err) {
+        console.warn(`効果音(${cfg.src})の初期化に失敗:`, err);
+        finishOnce();
+    }
+}
+
+function playQuizSoundEffect(key, onFinished = null) {
+    const cfg = SOUND_EFFECT_CONFIG[key];
+    const st = _soundEffectStates[key];
+    if (!cfg || !st) {
+        if (typeof onFinished === 'function') onFinished();
+        return;
+    }
+
+    if (st.fallbackTimer) {
+        clearTimeout(st.fallbackTimer);
+        st.fallbackTimer = null;
     }
 
     let finishedCalled = false;
     const finishOnce = () => {
         if (finishedCalled) return;
         finishedCalled = true;
-        if (_quizDecisionFallbackTimer) {
-            clearTimeout(_quizDecisionFallbackTimer);
-            _quizDecisionFallbackTimer = null;
+        if (st.fallbackTimer) {
+            clearTimeout(st.fallbackTimer);
+            st.fallbackTimer = null;
         }
         if (typeof onFinished === 'function') {
             onFinished();
         }
     };
 
-    try {
-        if (!_quizDecisionAudio) {
-            _quizDecisionAudio = new Audio('sound/decision.mp3');
-            _quizDecisionAudio.preload = 'auto';
-            _quizDecisionAudio.volume = 0.6;
-        }
-        _quizDecisionAudio.onended = finishOnce;
-        _quizDecisionAudio.onerror = finishOnce;
-        _quizDecisionAudio.currentTime = 0;
-
-        const playPromise = _quizDecisionAudio.play();
-        if (playPromise && typeof playPromise.then === 'function') {
-            playPromise.then(() => {
-                const durationMs = Number.isFinite(_quizDecisionAudio.duration) && _quizDecisionAudio.duration > 0
-                    ? Math.ceil(_quizDecisionAudio.duration * 1000) + 150
-                    : 3000;
-                _quizDecisionFallbackTimer = setTimeout(finishOnce, durationMs);
-            }).catch(err => {
-                console.warn('決定効果音の再生に失敗:', err);
+    // 1. Web Audio API (事前デコード済みバッファがあればiOS/Androidでも遅延ゼロで確実に再生)
+    const ctx = getSharedAudioContext();
+    if (ctx && st.buffer) {
+        const playBuffer = () => {
+            try {
+                const src = ctx.createBufferSource();
+                const gain = ctx.createGain();
+                src.buffer = st.buffer;
+                gain.gain.value = cfg.volume;
+                src.connect(gain);
+                gain.connect(ctx.destination);
+                src.onended = finishOnce;
+                src.start(0);
+                const durationMs = Math.ceil(st.buffer.duration * 1000) + 150;
+                st.fallbackTimer = setTimeout(finishOnce, durationMs);
+            } catch (err) {
+                console.warn(`WebAudio効果音(${cfg.src})再生に失敗:`, err);
                 finishOnce();
-            });
+            }
+        };
+
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(playBuffer).catch(() => playSoundEffectHtmlAudio(key, finishOnce));
         } else {
-            _quizDecisionFallbackTimer = setTimeout(finishOnce, 1200);
+            playBuffer();
         }
-    } catch (err) {
-        console.warn('決定効果音の初期化に失敗:', err);
-        finishOnce();
+        return;
     }
+
+    // 2. HTMLAudioElement フォールバック (file:// 環境や初回プリロード完了前)
+    playSoundEffectHtmlAudio(key, finishOnce);
+}
+
+function playQuizDecisionSound(onFinished = null) {
+    playQuizSoundEffect('decision', onFinished);
+}
+
+function playQuizAnswerSound(onFinished = null) {
+    playQuizSoundEffect('answer', onFinished);
 }
 
 function closeDetailModal() {
@@ -1649,11 +1805,11 @@ function closeDetailModal() {
     setTimeout(() => {
         modal.classList.add('hidden');
     }, 300);
-    if (window.activeAudioTimeout) clearTimeout(window.activeAudioTimeout);
+    resetStatMelodyState();
 }
 
 function playStatMelody(p) {
-    if (isPlayingAudio) return;
+    if (!p || isPlayingAudio) return;
     isPlayingAudio = true;
     const btn = document.getElementById('play-melody-btn');
     if (btn) {
@@ -1661,90 +1817,97 @@ function playStatMelody(p) {
         btn.classList.add('opacity-50');
     }
 
-    try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContext();
+    const scheduleNotes = (ctx) => {
+        try {
+            const stats = [p.hp, p.atk, p.def, p.spa, p.spd, p.spe];
+            const noteDuration = 0.50; // 音の出る速さを約0.5秒おきに調整
 
-        const stats = [p.hp, p.atk, p.def, p.spa, p.spd, p.spe];
-        const noteDuration = 0.50; // 音の出る速さを約0.5秒おきに調整
+            function statToFreq(val) {
+                return 130 + (val / 255) * 750;
+            }
 
-        function statToFreq(val) {
-            return 130 + (val / 255) * 750;
-        }
+            stats.forEach((val, i) => {
+                const startTime = ctx.currentTime + (i * noteDuration);
+                const freq = statToFreq(val);
 
-        stats.forEach((val, i) => {
-            const startTime = ctx.currentTime + (i * noteDuration);
-            const freq = statToFreq(val);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
 
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, startTime);
 
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, startTime);
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.25, startTime + 0.06);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration - 0.04);
 
-            gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.25, startTime + 0.06);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration - 0.04);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
 
-            osc.connect(gain);
-            gain.connect(ctx.destination);
+                osc.start(startTime);
+                osc.stop(startTime + noteDuration);
 
-            osc.start(startTime);
-            osc.stop(startTime + noteDuration);
+                setTimeout(() => {
+                    document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
+                    const row = document.getElementById(`stat-row-${i}`);
+                    if (row) {
+                        row.classList.add('bg-red-100', 'font-black');
+                    }
+                }, i * noteDuration * 1000);
+            });
+
+            const totalStartTime = ctx.currentTime + (stats.length * noteDuration);
+            const totalDuration = 0.7;
+            const totalFreq = 300 + (Math.min(p.total, 720) / 720) * 800;
 
             setTimeout(() => {
                 document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
-                const row = document.getElementById(`stat-row-${i}`);
-                if (row) {
-                    row.classList.add('bg-red-100', 'font-black');
-                }
-            }, i * noteDuration * 1000);
-        });
+                const totalDisp = document.getElementById('total-stat-display');
+                if (totalDisp) totalDisp.classList.add('scale-125', 'text-red-700', 'transition-transform');
+            }, stats.length * noteDuration * 1000);
 
-        const totalStartTime = ctx.currentTime + (stats.length * noteDuration);
-        const totalDuration = 0.7;
-        const totalFreq = 300 + (Math.min(p.total, 720) / 720) * 800;
+            const totalOsc = ctx.createOscillator();
+            const totalGain = ctx.createGain();
 
-        setTimeout(() => {
-            document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
-            const totalDisp = document.getElementById('total-stat-display');
-            if (totalDisp) totalDisp.classList.add('scale-125', 'text-red-700', 'transition-transform');
-        }, stats.length * noteDuration * 1000);
+            totalOsc.type = 'sine';
+            totalOsc.frequency.setValueAtTime(totalFreq, totalStartTime);
 
-        const totalOsc = ctx.createOscillator();
-        const totalGain = ctx.createGain();
+            totalGain.gain.setValueAtTime(0, totalStartTime);
+            totalGain.gain.linearRampToValueAtTime(0.35, totalStartTime + 0.1);
+            totalGain.gain.exponentialRampToValueAtTime(0.001, totalStartTime + totalDuration);
 
-        totalOsc.type = 'sine';
-        totalOsc.frequency.setValueAtTime(totalFreq, totalStartTime);
+            totalOsc.connect(totalGain);
+            totalGain.connect(ctx.destination);
 
-        totalGain.gain.setValueAtTime(0, totalStartTime);
-        totalGain.gain.linearRampToValueAtTime(0.35, totalStartTime + 0.1);
-        totalGain.gain.exponentialRampToValueAtTime(0.001, totalStartTime + totalDuration);
+            totalOsc.start(totalStartTime);
+            totalOsc.stop(totalStartTime + totalDuration);
 
-        totalOsc.connect(totalGain);
-        totalGain.connect(ctx.destination);
+            if (window.activeAudioTimeout) clearTimeout(window.activeAudioTimeout);
+            window.activeAudioTimeout = setTimeout(() => {
+                resetStatMelodyState();
+            }, (stats.length * noteDuration + totalDuration) * 1000);
+        } catch (e) {
+            console.error(e);
+            resetStatMelodyState();
+        }
+    };
 
-        totalOsc.start(totalStartTime);
-        totalOsc.stop(totalStartTime + totalDuration);
-
-        window.activeAudioTimeout = setTimeout(() => {
-            document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
-            const totalDisp = document.getElementById('total-stat-display');
-            if (totalDisp) totalDisp.classList.remove('scale-125', 'text-red-700');
-            if (btn) {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50');
-            }
-            isPlayingAudio = false;
-        }, (stats.length * noteDuration + totalDuration) * 1000);
-
+    try {
+        const ctx = getSharedAudioContext();
+        if (!ctx) {
+            resetStatMelodyState();
+            return;
+        }
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(() => scheduleNotes(ctx)).catch(err => {
+                console.warn('AudioContext resume failed:', err);
+                resetStatMelodyState();
+            });
+        } else {
+            scheduleNotes(ctx);
+        }
     } catch (e) {
         console.error(e);
-        isPlayingAudio = false;
-        if (btn) {
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
-        }
+        resetStatMelodyState();
     }
 }
 
@@ -2437,6 +2600,8 @@ function updateQuizRangeSummary() {
 
 // 選択した設定（難易度＋世代絞り込み）でクイズを開始
 function startConfiguredQuiz() {
+    unlockAudioPlayback();
+    resetStatMelodyState();
     if (!quizSelectedGens || quizSelectedGens.size === 0) {
         alert('出題する世代を1つ以上選択してください。');
         return;
@@ -2540,6 +2705,7 @@ function renderQuizHearts() {
 }
 
 function playQuizTargetMelody() {
+    unlockAudioPlayback();
     const target = _secretQuizTarget || _revealedQuizTarget;
     if (!target) return;
     const btn = document.getElementById('quiz-play-target-btn');
@@ -2976,6 +3142,7 @@ function renderQuizFormSelectionPanel(matched, forms) {
 }
 
 function selectQuizPokemonToSubmit(pokemonId) {
+    unlockAudioPlayback();
     const found = pokemonList.find(p => p.id === pokemonId);
     if (!found) return;
     closeQuizFormSelectionPanel();
@@ -3030,16 +3197,21 @@ function processQuizAnswer(found) {
         showSecurityToast('💡 5問ミスにより「正解の鳴き声ヒント」が解放されました！');
     }
 
-    triggerQuizWave(2.4);
-    playStatMelody(found);
+    playQuizDecisionSound();
 
     if (quizRemainingAttempts <= 0) {
         finishQuiz(false);
+        return;
     }
+
+    resetStatMelodyState();
+    triggerQuizWave(2.4);
+    playStatMelody(found);
 }
 
 function handleQuizSubmit(e) {
     e.preventDefault();
+    unlockAudioPlayback();
     const input = document.getElementById('quiz-guess-input');
     const errBox = document.getElementById('quiz-input-error');
     const errText = document.getElementById('quiz-input-error-text');
@@ -3288,8 +3460,9 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
 
     if (isWin) {
         renderQuizShareSection(p, attemptsUsed);
-        playQuizDecisionSound(() => {
+        playQuizAnswerSound(() => {
             if (!quizIsPlaying && !resultScreen.classList.contains('hidden')) {
+                resetStatMelodyState();
                 triggerQuizWave(2.6);
                 playStatMelody(p);
             }
@@ -3297,8 +3470,11 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
     } else {
         hideQuizShareSection();
         setTimeout(() => {
-            triggerQuizWave(2.6);
-            playStatMelody(p);
+            if (!quizIsPlaying && !resultScreen.classList.contains('hidden')) {
+                resetStatMelodyState();
+                triggerQuizWave(2.6);
+                playStatMelody(p);
+            }
         }, 400);
     }
 }
