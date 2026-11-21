@@ -577,6 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateQuizRangeSummary();
     renderTypeFilters();
     initFormFilterEvents();
+    if (typeof preloadAllSoundEffectsRaw === 'function') {
+        preloadAllSoundEffectsRaw();
+    }
     fetchOptimizedPokemonData();
 
     const searchInput = document.getElementById('search-input');
@@ -1005,14 +1008,21 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
                 return a.baseId - b.baseId;
             });
 
-            // バッチごとに進捗を保存（途中でリロードしても続きから再開可能に）
-            try {
-                localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
-            } catch (e) { }
+            // バックグラウンド同期負荷軽減のため、キャッシュ保存は一定バッチごとに間引き、
+            // 図鑑グリッド再描画は図鑑モード表示中のみ行う
+            const batchStep = Math.floor(i / batchSize);
+            const isLastBatch = (i + batchSize) >= itemsToFetch.length;
+            if (batchStep % 5 === 0 || isLastBatch) {
+                try {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
+                } catch (e) { }
+            }
 
             updateLoadedCount();
             updateFormCounts();
-            filterAndRenderPokemon();
+            if (currentAppMode === 'pokedex') {
+                filterAndRenderPokemon();
+            }
 
             if (!isBackgroundDiffSync) {
                 const percent = Math.min(100, Math.round((pokemonList.length / allItems.length) * 100));
@@ -1212,6 +1222,39 @@ function toHiragana(str) {
     return str.replace(/[\u30a1-\u30f6]/g, match => String.fromCharCode(match.charCodeAt(0) - 0x60));
 }
 
+function ensureSearchCache(p) {
+    if (!p) return null;
+    if (!p._sc) {
+        const nl = (p.name || '').toLowerCase();
+        const fl = (p.formLabel || '').toLowerCase();
+        const aliases = getPokemonAliases(p);
+        const aliasesNorm = [];
+        const aliasesKata = [];
+        const aliasesHira = [];
+        for (let i = 0; i < aliases.length; i++) {
+            const an = normalizePokemonQuery(aliases[i]);
+            aliasesNorm.push(an);
+            aliasesKata.push(toKatakana(an));
+            aliasesHira.push(toHiragana(an));
+        }
+        p._sc = {
+            name: nl,
+            nameHira: toHiragana(nl),
+            form: fl,
+            formHira: toHiragana(fl),
+            rawName: (p.rawName || '').toLowerCase(),
+            aliasesNorm,
+            aliasesKata,
+            aliasesHira,
+            idStr: p.id.toString(),
+            baseIdStr: p.baseId ? p.baseId.toString() : '',
+            baseIdPad3: p.baseId ? p.baseId.toString().padStart(3, '0') : '',
+            baseIdPad4: p.baseId ? p.baseId.toString().padStart(4, '0') : ''
+        };
+    }
+    return p._sc;
+}
+
 function filterAndRenderPokemon() {
     const rawQuery = document.getElementById('search-input').value.trim();
     const query = rawQuery.toLowerCase();
@@ -1242,26 +1285,7 @@ function filterAndRenderPokemon() {
         if (!hasQuery) return true;
 
         // 3. 検索文字列キャッシュ（初回のみ計算・2回目以降ゼロコスト）
-        if (!p._sc) {
-            const nl = (p.name || '').toLowerCase();
-            const fl = (p.formLabel || '').toLowerCase();
-            const aliases = getPokemonAliases(p);
-            p._sc = {
-                name: nl,
-                nameHira: toHiragana(nl),
-                form: fl,
-                formHira: toHiragana(fl),
-                rawName: (p.rawName || '').toLowerCase(),
-                aliasesNorm: aliases.map(a => normalizePokemonQuery(a)),
-                aliasesHira: aliases.map(a => toHiragana(normalizePokemonQuery(a))),
-                idStr: p.id.toString(),
-                baseIdStr: p.baseId ? p.baseId.toString() : '',
-                baseIdPad3: p.baseId ? p.baseId.toString().padStart(3, '0') : '',
-                baseIdPad4: p.baseId ? p.baseId.toString().padStart(4, '0') : ''
-            };
-        }
-
-        const sc = p._sc;
+        const sc = ensureSearchCache(p);
         const normQ = normalizePokemonQuery(query);
         const normKataQ = toKatakana(normQ);
         const normHiraQ = toHiragana(normQ);
@@ -1753,14 +1777,16 @@ function playPokemonCrySafe(p, allowBaseFallback = false) {
 let _sharedAudioCtx = null;
 let _audioUnlocked = false;
 
+const _seCacheQuery = (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') ? '' : '?v=20261121c';
+
 const SOUND_EFFECT_CONFIG = {
-    decision: { src: 'sound/decision.mp3', volume: 0.85, defaultDurationMs: 3000 },
-    answer: { src: 'sound/answer.mp3', volume: 0.85, defaultDurationMs: 800 }
+    decision: { src: `sound/decision.mp3${_seCacheQuery}`, volume: 0.85, defaultDurationMs: 550 },
+    answer: { src: `sound/answer.mp3${_seCacheQuery}`, volume: 0.85, defaultDurationMs: 1250 }
 };
 
 const _soundEffectStates = {
-    decision: { audio: null, buffer: null, loading: false, fallbackTimer: null },
-    answer: { audio: null, buffer: null, loading: false, fallbackTimer: null }
+    decision: { audio: null, rawBuffer: null, buffer: null, loadingRaw: false, loading: false, fallbackTimer: null },
+    answer: { audio: null, rawBuffer: null, buffer: null, loadingRaw: false, loading: false, fallbackTimer: null }
 };
 
 function getSharedAudioContext() {
@@ -1772,6 +1798,39 @@ function getSharedAudioContext() {
     return _sharedAudioCtx;
 }
 
+function preloadSoundEffectRawBuffer(key) {
+    const cfg = SOUND_EFFECT_CONFIG[key];
+    const st = _soundEffectStates[key];
+    if (!cfg || !st || st.rawBuffer || st.loadingRaw) return Promise.resolve(st ? st.rawBuffer : null);
+    if (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') {
+        return Promise.resolve(null);
+    }
+    st.loadingRaw = true;
+    return fetch(cfg.src)
+        .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.arrayBuffer();
+        })
+        .then(buf => {
+            st.rawBuffer = buf;
+            return buf;
+        })
+        .catch(err => {
+            console.warn(`効果音(${cfg.src})の先行取得をスキップ:`, err);
+            return null;
+        })
+        .finally(() => {
+            st.loadingRaw = false;
+        });
+}
+
+function preloadAllSoundEffectsRaw() {
+    Object.keys(SOUND_EFFECT_CONFIG).forEach(key => {
+        preloadSoundEffectRawBuffer(key);
+        preloadHtmlAudioElement(key);
+    });
+}
+
 function preloadSoundEffectBuffer(key, ctx) {
     const cfg = SOUND_EFFECT_CONFIG[key];
     const st = _soundEffectStates[key];
@@ -1780,14 +1839,14 @@ function preloadSoundEffectBuffer(key, ctx) {
         return; // file:// では fetch が CORS でブロックされるため <audio> のみ使用
     }
     st.loading = true;
-    fetch(cfg.src)
-        .then(res => {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.arrayBuffer();
+    const rawPromise = st.rawBuffer ? Promise.resolve(st.rawBuffer) : preloadSoundEffectRawBuffer(key);
+    rawPromise
+        .then(buf => {
+            if (!buf) return null;
+            return ctx.decodeAudioData(buf.slice(0));
         })
-        .then(buf => ctx.decodeAudioData(buf))
         .then(decoded => {
-            st.buffer = decoded;
+            if (decoded) st.buffer = decoded;
         })
         .catch(err => {
             console.warn(`効果音(${cfg.src})のWebAudioプリロードをスキップ:`, err);
@@ -1815,7 +1874,7 @@ function unlockAudioPlayback() {
         const ctx = getSharedAudioContext();
         if (ctx) {
             if (ctx.state === 'suspended') {
-                ctx.resume().catch(() => {});
+                ctx.resume().catch(() => { });
             }
             if (!_audioUnlocked) {
                 // iOS Safari等で非同期コールバック内(setTimeout / onended)のAudioContext再生を有効化するための無音アンロック
@@ -1836,11 +1895,25 @@ function unlockAudioPlayback() {
 document.addEventListener('pointerdown', unlockAudioPlayback, { once: true, passive: true });
 document.addEventListener('keydown', unlockAudioPlayback, { once: true, passive: true });
 
+let _activeStatMelodyNodes = [];
+let _statHighlightTimeouts = [];
+
 function resetStatMelodyState() {
     if (window.activeAudioTimeout) {
         clearTimeout(window.activeAudioTimeout);
         window.activeAudioTimeout = null;
     }
+    _statHighlightTimeouts.forEach(tid => clearTimeout(tid));
+    _statHighlightTimeouts = [];
+    _activeStatMelodyNodes.forEach(node => {
+        try {
+            node.stop();
+        } catch (e) { /* already stopped */ }
+        try {
+            node.disconnect();
+        } catch (e) { /* ignore */ }
+    });
+    _activeStatMelodyNodes = [];
     isPlayingAudio = false;
     document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
     const totalDisp = document.getElementById('total-stat-display');
@@ -1891,7 +1964,7 @@ function playSoundEffectHtmlAudio(key, finishOnce) {
     }
 }
 
-function playQuizSoundEffect(key, onFinished = null) {
+function playQuizSoundEffect(key, onFinished = null, targetStartTime = null) {
     const cfg = SOUND_EFFECT_CONFIG[key];
     const st = _soundEffectStates[key];
     if (!cfg || !st) {
@@ -1929,8 +2002,12 @@ function playQuizSoundEffect(key, onFinished = null) {
                 src.connect(gain);
                 gain.connect(ctx.destination);
                 src.onended = finishOnce;
-                src.start(0);
-                const durationMs = Math.ceil(st.buffer.duration * 1000) + 150;
+                const startAt = (typeof targetStartTime === 'number' && targetStartTime > ctx.currentTime)
+                    ? targetStartTime
+                    : ctx.currentTime;
+                src.start(startAt);
+                const delayMs = Math.max(0, Math.ceil((startAt - ctx.currentTime) * 1000));
+                const durationMs = delayMs + Math.ceil(st.buffer.duration * 1000) + 150;
                 st.fallbackTimer = setTimeout(finishOnce, durationMs);
             } catch (err) {
                 console.warn(`WebAudio効果音(${cfg.src})再生に失敗:`, err);
@@ -1946,16 +2023,21 @@ function playQuizSoundEffect(key, onFinished = null) {
         return;
     }
 
-    // 2. HTMLAudioElement フォールバック (file:// 環境や初回プリロード完了前)
+    // 2. rawBuffer取得済み・未デコード時 (初回タップ直後の遅延最小化)
+    if (ctx && st.rawBuffer && !st.loading) {
+        preloadSoundEffectBuffer(key, ctx);
+    }
+
+    // 3. HTMLAudioElement フォールバック (file:// 環境や初回プリロード完了前)
     playSoundEffectHtmlAudio(key, finishOnce);
 }
 
-function playQuizDecisionSound(onFinished = null) {
-    playQuizSoundEffect('decision', onFinished);
+function playQuizDecisionSound(onFinished = null, targetStartTime = null) {
+    playQuizSoundEffect('decision', onFinished, targetStartTime);
 }
 
-function playQuizAnswerSound(onFinished = null) {
-    playQuizSoundEffect('answer', onFinished);
+function playQuizAnswerSound(onFinished = null, targetStartTime = null) {
+    playQuizSoundEffect('answer', onFinished, targetStartTime);
 }
 
 function closeDetailModal() {
@@ -1968,7 +2050,7 @@ function closeDetailModal() {
     resetStatMelodyState();
 }
 
-function playStatMelody(p) {
+function playStatMelody(p, targetStartTime = null) {
     if (!p || isPlayingAudio) return;
     isPlayingAudio = true;
     const btn = document.getElementById('play-melody-btn');
@@ -1981,13 +2063,17 @@ function playStatMelody(p) {
         try {
             const stats = [p.hp, p.atk, p.def, p.spa, p.spd, p.spe];
             const noteDuration = 0.50; // 音の出る速さを約0.5秒おきに調整
+            const baseStartTime = (typeof targetStartTime === 'number' && targetStartTime > ctx.currentTime)
+                ? targetStartTime
+                : ctx.currentTime;
+            const startOffsetMs = Math.max(0, (baseStartTime - ctx.currentTime) * 1000);
 
             function statToFreq(val) {
                 return 130 + (val / 255) * 750;
             }
 
             stats.forEach((val, i) => {
-                const startTime = ctx.currentTime + (i * noteDuration);
+                const startTime = baseStartTime + (i * noteDuration);
                 const freq = statToFreq(val);
 
                 const osc = ctx.createOscillator();
@@ -2005,25 +2091,28 @@ function playStatMelody(p) {
 
                 osc.start(startTime);
                 osc.stop(startTime + noteDuration);
+                _activeStatMelodyNodes.push(osc);
 
-                setTimeout(() => {
+                const rowTid = setTimeout(() => {
                     document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
                     const row = document.getElementById(`stat-row-${i}`);
                     if (row) {
                         row.classList.add('bg-red-100', 'font-black');
                     }
-                }, i * noteDuration * 1000);
+                }, startOffsetMs + (i * noteDuration * 1000));
+                _statHighlightTimeouts.push(rowTid);
             });
 
-            const totalStartTime = ctx.currentTime + (stats.length * noteDuration);
+            const totalStartTime = baseStartTime + (stats.length * noteDuration);
             const totalDuration = 0.7;
             const totalFreq = 300 + (Math.min(p.total, 720) / 720) * 800;
 
-            setTimeout(() => {
+            const totalTid = setTimeout(() => {
                 document.querySelectorAll('[id^="stat-row-"]').forEach(el => el.classList.remove('bg-red-100', 'font-black'));
                 const totalDisp = document.getElementById('total-stat-display');
                 if (totalDisp) totalDisp.classList.add('scale-125', 'text-red-700', 'transition-transform');
-            }, stats.length * noteDuration * 1000);
+            }, startOffsetMs + (stats.length * noteDuration * 1000));
+            _statHighlightTimeouts.push(totalTid);
 
             const totalOsc = ctx.createOscillator();
             const totalGain = ctx.createGain();
@@ -2040,11 +2129,12 @@ function playStatMelody(p) {
 
             totalOsc.start(totalStartTime);
             totalOsc.stop(totalStartTime + totalDuration);
+            _activeStatMelodyNodes.push(totalOsc);
 
             if (window.activeAudioTimeout) clearTimeout(window.activeAudioTimeout);
             window.activeAudioTimeout = setTimeout(() => {
                 resetStatMelodyState();
-            }, (stats.length * noteDuration + totalDuration) * 1000);
+            }, startOffsetMs + ((stats.length * noteDuration + totalDuration) * 1000));
         } catch (e) {
             console.error(e);
             resetStatMelodyState();
@@ -2326,17 +2416,34 @@ function closeQuizModal() {
     switchAppMode('pokedex');
 }
 
-function triggerQuizWave(durationSec) {
-    const bars = document.querySelectorAll('.quiz-wave-bar');
-    bars.forEach(b => b.classList.add('playing'));
+let _quizWaveBarsCache = null;
+let _quizWaveTimer = null;
 
-    setTimeout(() => {
-        bars.forEach(b => b.classList.remove('playing'));
+function getQuizWaveBars() {
+    if (!_quizWaveBarsCache || _quizWaveBarsCache.length === 0) {
+        _quizWaveBarsCache = document.querySelectorAll('.quiz-wave-bar');
+    }
+    return _quizWaveBarsCache;
+}
+
+function triggerQuizWave(durationSec) {
+    const bars = getQuizWaveBars();
+    if (_quizWaveTimer) clearTimeout(_quizWaveTimer);
+    for (let i = 0; i < bars.length; i++) bars[i].classList.add('playing');
+
+    _quizWaveTimer = setTimeout(() => {
+        for (let i = 0; i < bars.length; i++) bars[i].classList.remove('playing');
+        _quizWaveTimer = null;
     }, (durationSec || 2.4) * 1000);
 }
 
 function stopQuizWave() {
-    document.querySelectorAll('.quiz-wave-bar').forEach(b => b.classList.remove('playing'));
+    if (_quizWaveTimer) {
+        clearTimeout(_quizWaveTimer);
+        _quizWaveTimer = null;
+    }
+    const bars = getQuizWaveBars();
+    for (let i = 0; i < bars.length; i++) bars[i].classList.remove('playing');
 }
 
 function updateQuizCryHintState() {
@@ -2852,15 +2959,27 @@ function renderQuizHearts() {
     if (remainingEl) remainingEl.textContent = quizRemainingAttempts;
 
     if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < QUIZ_MAX_ATTEMPTS; i++) {
-        const heart = document.createElement('i');
-        if (i < quizRemainingAttempts) {
-            heart.className = 'fa-solid fa-heart text-rose-500 transition-all transform hover:scale-110';
-        } else {
-            heart.className = 'fa-regular fa-heart text-slate-300 transition-all';
+    if (container.children.length !== QUIZ_MAX_ATTEMPTS) {
+        container.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < QUIZ_MAX_ATTEMPTS; i++) {
+            const heart = document.createElement('i');
+            heart.className = i < quizRemainingAttempts
+                ? 'fa-solid fa-heart text-rose-500'
+                : 'fa-regular fa-heart text-slate-300';
+            frag.appendChild(heart);
         }
-        container.appendChild(heart);
+        container.appendChild(frag);
+        return;
+    }
+
+    for (let i = 0; i < QUIZ_MAX_ATTEMPTS; i++) {
+        const cls = i < quizRemainingAttempts
+            ? 'fa-solid fa-heart text-rose-500'
+            : 'fa-regular fa-heart text-slate-300';
+        if (container.children[i].className !== cls) {
+            container.children[i].className = cls;
+        }
     }
 }
 
@@ -3104,34 +3223,31 @@ function findPokemonByQuery(rawVal) {
     const norm = normalizePokemonQuery(cleanRaw);
     const normKata = toKatakana(norm);
     const normHira = toHiragana(norm);
+    const canPrefix = normKata.length >= 2;
 
-    // 1. 完全一致探索（全エイリアス対象）
-    let matched = pokemonList.find(p => {
-        const aliases = getPokemonAliases(p);
-        return aliases.some(a => {
-            const an = normalizePokemonQuery(a);
-            const aKata = toKatakana(an);
-            const aHira = toHiragana(an);
-            return an === norm || aKata === normKata || aHira === normHira;
-        });
-    });
+    let prefixMatched = null;
 
-    if (matched) return matched;
+    for (let i = 0; i < pokemonList.length; i++) {
+        const p = pokemonList[i];
+        const sc = ensureSearchCache(p);
+        const aNorm = sc.aliasesNorm;
+        const aKata = sc.aliasesKata;
+        const aHira = sc.aliasesHira;
 
-    // 2. 前方一致探索（2文字以上の場合）
-    if (normKata.length >= 2) {
-        matched = pokemonList.find(p => {
-            const aliases = getPokemonAliases(p);
-            return aliases.some(a => {
-                const an = normalizePokemonQuery(a);
-                const aKata = toKatakana(an);
-                const aHira = toHiragana(an);
-                return an.startsWith(norm) || aKata.startsWith(normKata) || aHira.startsWith(normHira);
-            });
-        });
+        for (let j = 0; j < aNorm.length; j++) {
+            const an = aNorm[j];
+            const ak = aKata[j];
+            const ah = aHira[j];
+            if (an === norm || ak === normKata || ah === normHira) {
+                return p;
+            }
+            if (canPrefix && !prefixMatched && (an.startsWith(norm) || ak.startsWith(normKata) || ah.startsWith(normHira))) {
+                prefixMatched = p;
+            }
+        }
     }
 
-    return matched;
+    return prefixMatched;
 }
 
 // 別の姿（フォルム違い・メガ・合体・リージョン）および種族値同一ポケモンの抽出
@@ -3346,24 +3462,40 @@ function processQuizAnswer(found) {
 
     quizRemainingAttempts--;
     quizGuessedList.unshift(found);
-    renderQuizHearts();
-    renderQuizHistory();
-    updateQuizCryHintState();
-
-    if (quizGuessedList.length === 5) {
-        showSecurityToast('💡 5問ミスにより「正解の鳴き声ヒント」が解放されました！');
-    }
-
-    playQuizDecisionSound();
 
     if (quizRemainingAttempts <= 0) {
+        playQuizDecisionSound();
+        renderQuizHearts();
+        prependQuizHistoryItem(found);
+        updateQuizCryHintState();
         finishQuiz(false);
         return;
     }
 
+    // 音の遅延とズレをゼロにするため、DOM更新より先に同一WebAudioクロックで両音をスケジュール
     resetStatMelodyState();
-    triggerQuizWave(2.4);
-    playStatMelody(found);
+    const ctx = getSharedAudioContext();
+    const decisionState = _soundEffectStates.decision;
+    const syncStartTime = (ctx && ctx.state === 'running' && decisionState && decisionState.buffer)
+        ? (ctx.currentTime + 0.012)
+        : null;
+    playQuizDecisionSound(null, syncStartTime);
+    playStatMelody(found, syncStartTime);
+
+    const updateWrongUi = () => {
+        renderQuizHearts();
+        prependQuizHistoryItem(found);
+        updateQuizCryHintState();
+        triggerQuizWave(2.4);
+        if (quizGuessedList.length === 5) {
+            showSecurityToast('💡 5問ミスにより「正解の鳴き声ヒント」が解放されました！');
+        }
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(updateWrongUi);
+    } else {
+        updateWrongUi();
+    }
 }
 
 function handleQuizSubmit(e) {
@@ -3401,6 +3533,88 @@ function handleQuizSubmit(e) {
     processQuizAnswer(found);
 }
 
+function buildQuizHistoryCardHtml(p, attemptNumber, targetTotal) {
+    const displayId = (p.baseId || p.id).toString().padStart(4, '0');
+    const badge = getFormBadgeHtml(p);
+    const diffTotal = p.total - targetTotal;
+    let diffBadge = '';
+    if (diffTotal > 0) {
+        diffBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">合計 ${p.total} (正解より +${diffTotal})</span>`;
+    } else if (diffTotal < 0) {
+        diffBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">合計 ${p.total} (正解より ${diffTotal})</span>`;
+    } else {
+        diffBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">合計 ${p.total} (正解と同値!)</span>`;
+    }
+
+    return `
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col gap-3 hover:border-slate-300">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-[10px] font-black tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                        #${attemptNumber} 不正解
+                    </span>
+                    <img src="${getPokemonImageUrl(p)}" width="40" height="40" loading="lazy" decoding="async" class="w-10 h-10 object-contain drop-shadow-sm" onerror="handlePokemonImageError(this, ${p.id}, ${p.baseId || p.id})">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-400 font-bold">#${displayId}</span>
+                        <span class="text-sm font-black text-slate-900">${p.name}</span>
+                        ${badge}
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    ${diffBadge}
+                    <button type="button" onclick="playGuessedSound(${p.id})"
+                        class="px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold shadow-xs border border-slate-200 flex items-center gap-1.5 cursor-pointer active:scale-98">
+                        <i class="fa-solid fa-volume-high text-rose-500"></i>
+                        <span>この音を聴く</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stat Comparison Grid -->
+            <div class="grid grid-cols-6 gap-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center text-[10px]">
+                <div>
+                    <div class="text-slate-400 font-bold">HP</div>
+                    <div class="text-slate-800 font-black text-xs">${p.hp}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-bold">こうげき</div>
+                    <div class="text-slate-800 font-black text-xs">${p.atk}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-bold">ぼうぎょ</div>
+                    <div class="text-slate-800 font-black text-xs">${p.def}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-bold">とくこう</div>
+                    <div class="text-slate-800 font-black text-xs">${p.spa}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-bold">とくぼう</div>
+                    <div class="text-slate-800 font-black text-xs">${p.spd}</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-bold">すばやさ</div>
+                    <div class="text-slate-800 font-black text-xs">${p.spe}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function prependQuizHistoryItem(p) {
+    const list = document.getElementById('quiz-history-list');
+    const countEl = document.getElementById('quiz-history-count');
+    if (countEl) countEl.textContent = `${quizGuessedList.length} / ${QUIZ_MAX_ATTEMPTS} 試行`;
+    if (!list || !p) return;
+
+    const emptyEl = document.getElementById('quiz-history-empty');
+    if (emptyEl) emptyEl.remove();
+
+    const target = _secretQuizTarget || _revealedQuizTarget;
+    const targetTotal = target ? target.total : 0;
+    list.insertAdjacentHTML('afterbegin', buildQuizHistoryCardHtml(p, quizGuessedList.length, targetTotal));
+}
+
 function renderQuizHistory() {
     const list = document.getElementById('quiz-history-list');
     const countEl = document.getElementById('quiz-history-count');
@@ -3420,73 +3634,9 @@ function renderQuizHistory() {
     const target = _secretQuizTarget || _revealedQuizTarget;
     const targetTotal = target ? target.total : 0;
 
-    list.innerHTML = quizGuessedList.map((p, idx) => {
-        const displayId = (p.baseId || p.id).toString().padStart(4, '0');
-        const badge = getFormBadgeHtml(p);
-        const diffTotal = p.total - targetTotal;
-        let diffBadge = '';
-        if (diffTotal > 0) {
-            diffBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">合計 ${p.total} (正解より +${diffTotal})</span>`;
-        } else if (diffTotal < 0) {
-            diffBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">合計 ${p.total} (正解より ${diffTotal})</span>`;
-        } else {
-            diffBadge = `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">合計 ${p.total} (正解と同値!)</span>`;
-        }
-
-        return `
-            <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col gap-3 transition-all hover:border-slate-300">
-                <div class="flex justify-between items-center flex-wrap gap-2">
-                    <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-black tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
-                            #${quizGuessedList.length - idx} 不正解
-                        </span>
-                        <img src="${getPokemonImageUrl(p)}" class="w-10 h-10 object-contain drop-shadow-sm" onerror="handlePokemonImageError(this, ${p.id}, ${p.baseId || p.id})">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="text-xs text-slate-400 font-bold">#${displayId}</span>
-                            <span class="text-sm font-black text-slate-900">${p.name}</span>
-                            ${badge}
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${diffBadge}
-                        <button type="button" onclick="playGuessedSound(${p.id})"
-                            class="px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold shadow-xs border border-slate-200 flex items-center gap-1.5 cursor-pointer transition-all hover:scale-102 active:scale-98">
-                            <i class="fa-solid fa-volume-high text-rose-500"></i>
-                            <span>この音を聴く</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Stat Comparison Grid -->
-                <div class="grid grid-cols-6 gap-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center text-[10px]">
-                    <div>
-                        <div class="text-slate-400 font-bold">HP</div>
-                        <div class="text-slate-800 font-black text-xs">${p.hp}</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400 font-bold">こうげき</div>
-                        <div class="text-slate-800 font-black text-xs">${p.atk}</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400 font-bold">ぼうぎょ</div>
-                        <div class="text-slate-800 font-black text-xs">${p.def}</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400 font-bold">とくこう</div>
-                        <div class="text-slate-800 font-black text-xs">${p.spa}</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400 font-bold">とくぼう</div>
-                        <div class="text-slate-800 font-black text-xs">${p.spd}</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-400 font-bold">すばやさ</div>
-                        <div class="text-slate-800 font-black text-xs">${p.spe}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
+    list.innerHTML = quizGuessedList
+        .map((p, idx) => buildQuizHistoryCardHtml(p, quizGuessedList.length - idx, targetTotal))
+        .join('');
 }
 
 function playGuessedSound(id) {
@@ -3514,6 +3664,7 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
     quizIsPlaying = false; // クイズ終了 (セキュリティ監視解除 & 正解プロパティ参照可能化)
     _revealedQuizTarget = _secretQuizTarget;
     isShowingBlurWarning = false;
+    resetStatMelodyState();
     const warningModal = document.getElementById('quiz-blur-warning-modal');
     if (warningModal) warningModal.classList.add('hidden');
 
@@ -3604,26 +3755,19 @@ function finishQuiz(isWin, answeredPokemon = null, isSameStatsVariant = false, i
                     <i class="fa-solid fa-music"></i>
                     <span>メロディをもう一度聴く</span>
                 </button>
-                ${isWin ? `
                 <button type="button" onclick="playPokemonCrySafe(_revealedQuizTarget || _secretQuizTarget, true)"
                     class="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer">
                     <i class="fa-solid fa-volume-high"></i>
                     <span>鳴き声を聴く</span>
                 </button>
-                ` : ''}
             </div>
         </div>
     `;
 
     if (isWin) {
         renderQuizShareSection(p, attemptsUsed);
-        playQuizAnswerSound(() => {
-            if (!quizIsPlaying && !resultScreen.classList.contains('hidden')) {
-                resetStatMelodyState();
-                triggerQuizWave(2.6);
-                playStatMelody(p);
-            }
-        });
+        // 正解時は answer.mp3 のみ再生し、正解ポケモンの種族値メロディは自動再生しない
+        playQuizAnswerSound();
     } else {
         hideQuizShareSection();
         setTimeout(() => {
