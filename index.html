@@ -25,9 +25,9 @@
         integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
         crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- カスタムCSS -->
-    <link rel="stylesheet" href="style.css?v=20261115">
+    <link rel="stylesheet" href="style.css?v=20261121c">
     <!-- アプリケーションロジックJS -->
-    <script src="script.js?v=20261121b" defer></script>
+    <script src="script.js?v=20261121d" defer></script>
 </head>
 
 <body class="min-h-screen text-slate-800 flex flex-col">
@@ -93,11 +93,9 @@
     <main id="quiz-main-view"
         class="flex-grow max-w-5xl w-full mx-auto px-4 py-6 sm:py-8 flex flex-col items-center relative font-sans select-none">
 
-        <!-- 背景のほんのりとしたグラデーション装飾 -->
-        <div class="absolute inset-0 pointer-events-none opacity-40 overflow-hidden -z-10">
-            <div class="absolute -top-32 -left-32 w-80 h-80 bg-red-100 rounded-full blur-3xl"></div>
-            <div class="absolute top-1/2 -right-32 w-80 h-80 bg-amber-100 rounded-full blur-3xl"></div>
-            <div class="absolute -bottom-32 left-1/3 w-80 h-80 bg-indigo-50 rounded-full blur-3xl"></div>
+        <!-- 背景のほんのりとしたグラデーション装飾 (軽量radial-gradientでGPUブラー負荷を回避) -->
+        <div class="absolute inset-0 pointer-events-none opacity-65 overflow-hidden -z-10"
+            style="background: radial-gradient(circle at 10% 5%, rgba(254, 226, 226, 0.75), transparent 42%), radial-gradient(circle at 92% 55%, rgba(254, 243, 199, 0.75), transparent 42%), radial-gradient(circle at 45% 95%, rgba(238, 242, 255, 0.75), transparent 42%);">
         </div>
 
         <!-- ================= 画面 1: 難易度・モード選択 & 世代絞り込み ================= -->
@@ -339,13 +337,13 @@
 
                 <!-- サウンド波形バーアニメーション -->
                 <div class="flex items-end justify-center gap-1.5 h-14 w-full max-w-xs px-4">
-                    <div class="quiz-wave-bar w-3 bg-red-400 rounded-full h-6 transition-all duration-300"></div>
-                    <div class="quiz-wave-bar w-3 bg-orange-400 rounded-full h-10 transition-all duration-300"></div>
-                    <div class="quiz-wave-bar w-3 bg-amber-400 rounded-full h-14 transition-all duration-300"></div>
-                    <div class="quiz-wave-bar w-3 bg-emerald-400 rounded-full h-8 transition-all duration-300"></div>
-                    <div class="quiz-wave-bar w-3 bg-sky-400 rounded-full h-12 transition-all duration-300"></div>
-                    <div class="quiz-wave-bar w-3 bg-indigo-400 rounded-full h-9 transition-all duration-300"></div>
-                    <div class="quiz-wave-bar w-3 bg-purple-400 rounded-full h-14 transition-all duration-300"></div>
+                    <div class="quiz-wave-bar w-3 bg-red-400 rounded-full h-6"></div>
+                    <div class="quiz-wave-bar w-3 bg-orange-400 rounded-full h-10"></div>
+                    <div class="quiz-wave-bar w-3 bg-amber-400 rounded-full h-14"></div>
+                    <div class="quiz-wave-bar w-3 bg-emerald-400 rounded-full h-8"></div>
+                    <div class="quiz-wave-bar w-3 bg-sky-400 rounded-full h-12"></div>
+                    <div class="quiz-wave-bar w-3 bg-indigo-400 rounded-full h-9"></div>
+                    <div class="quiz-wave-bar w-3 bg-purple-400 rounded-full h-14"></div>
                 </div>
 
                 <!-- サウンドコントロール操作ボタン -->
