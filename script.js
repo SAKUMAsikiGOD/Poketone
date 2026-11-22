@@ -139,6 +139,7 @@ const EMBEDDED_FALLBACK_POKEMON = [
     { id: 6, baseId: 6, name: "リザードン", _baseSpeciesName: "リザードン", formType: "normal", formLabel: "通常", types: ["ほのお", "ひこう"], hp: 78, atk: 84, def: 78, spa: 109, spd: 85, spe: 100, total: 534, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/6.ogg" },
     { id: 7, baseId: 7, name: "ゼニガメ", _baseSpeciesName: "ゼニガメ", formType: "normal", formLabel: "通常", types: ["みず"], hp: 44, atk: 48, def: 65, spa: 50, spd: 64, spe: 43, total: 314, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/7.ogg" },
     { id: 25, baseId: 25, name: "ピカチュウ", _baseSpeciesName: "ピカチュウ", formType: "normal", formLabel: "通常", types: ["でんき"], hp: 35, atk: 55, def: 40, spa: 50, spd: 50, spe: 90, total: 320, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/25.ogg" },
+    { id: 26, baseId: 26, name: "ライチュウ", _baseSpeciesName: "ライチュウ", formType: "normal", formLabel: "通常", types: ["でんき"], hp: 60, atk: 90, def: 55, spa: 90, spd: 80, spe: 110, total: 485, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/26.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/26.ogg" },
     { id: 80, baseId: 80, name: "ヤドラン", _baseSpeciesName: "ヤドラン", formType: "normal", formLabel: "通常", types: ["みず", "エスパー"], hp: 95, atk: 75, def: 110, spa: 100, spd: 80, spe: 30, total: 490, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/80.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/80.ogg" },
     { id: 128, baseId: 128, name: "ケンタロス", _baseSpeciesName: "ケンタロス", formType: "normal", formLabel: "通常", types: ["ノーマル"], hp: 75, atk: 100, def: 95, spa: 40, spd: 70, spe: 110, total: 490, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/128.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/128.ogg" },
     { id: 133, baseId: 133, name: "イーブイ", _baseSpeciesName: "イーブイ", formType: "normal", formLabel: "通常", types: ["ノーマル"], hp: 55, atk: 55, def: 50, spa: 45, spd: 65, spe: 55, total: 325, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/133.ogg" },
@@ -210,6 +211,8 @@ const EMBEDDED_FALLBACK_POKEMON = [
     { id: 10294, baseId: 658, name: "メガゲッコウガ", rawName: "greninja-mega", _baseSpeciesName: "ゲッコウガ", formType: "mega", formLabel: "メガシンカ", types: ["みず", "あく"], hp: 72, atk: 125, def: 77, spa: 133, spd: 81, spe: 142, total: 630, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10294.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/658.ogg" },
     { id: 10302, baseId: 780, name: "メガジジーロン", rawName: "drampa-mega", _baseSpeciesName: "ジジーロン", formType: "mega", formLabel: "メガシンカ", types: ["ノーマル", "ドラゴン"], hp: 78, atk: 85, def: 110, spa: 160, spd: 116, spe: 36, total: 585, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10302.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/780.ogg" },
     { id: 10303, baseId: 870, name: "メガタイレーツ", rawName: "falinks-mega", _baseSpeciesName: "タイレーツ", formType: "mega", formLabel: "メガシンカ", types: ["かくとう"], hp: 65, atk: 135, def: 135, spa: 70, spd: 65, spe: 100, total: 570, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10303.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/870.ogg" },
+    { id: 10304, baseId: 26, name: "メガライチュウX", rawName: "raichu-mega-x", _baseSpeciesName: "ライチュウ", formType: "mega", formLabel: "メガシンカX", types: ["でんき"], hp: 60, atk: 135, def: 95, spa: 90, spd: 95, spe: 110, total: 585, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10304.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10304.ogg" },
+    { id: 10305, baseId: 26, name: "メガライチュウY", rawName: "raichu-mega-y", _baseSpeciesName: "ライチュウ", formType: "mega", formLabel: "メガシンカY", types: ["でんき"], hp: 60, atk: 100, def: 55, spa: 160, spd: 80, spe: 130, total: 585, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10305.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10305.ogg" },
     { id: 10307, baseId: 359, name: "メガアブソルZ", rawName: "absol-mega-z", _baseSpeciesName: "アブソル", formType: "mega", formLabel: "メガシンカZ", types: ["あく", "ゴースト"], hp: 65, atk: 160, def: 70, spa: 125, spd: 70, spe: 125, total: 615, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10307.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/359.ogg" },
     { id: 10309, baseId: 445, name: "メガガブリアスZ", rawName: "garchomp-mega-z", _baseSpeciesName: "ガブリアス", formType: "mega", formLabel: "メガシンカZ", types: ["ドラゴン", "じめん"], hp: 108, atk: 180, def: 105, spa: 130, spd: 95, spe: 112, total: 730, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10309.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/445.ogg" },
     { id: 10310, baseId: 448, name: "メガルカリオZ", rawName: "lucario-mega-z", _baseSpeciesName: "ルカリオ", formType: "mega", formLabel: "メガシンカZ", types: ["かくとう", "はがね"], hp: 70, atk: 165, def: 78, spa: 155, spd: 70, spe: 122, total: 660, image: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10310.png", cry: "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/448.ogg" },
@@ -755,6 +758,18 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
                             if (p.cry && p.cry.includes('/sprites/pokemon/latest/')) {
                                 p.cry = p.cry.replace('/sprites/pokemon/latest/', '/cries/pokemon/latest/');
                             }
+                            if (!p.rawName) {
+                                const fallbackRawById = {
+                                    10034: 'charizard-mega-x',
+                                    10035: 'charizard-mega-y',
+                                    10043: 'mewtwo-mega-x',
+                                    10044: 'mewtwo-mega-y',
+                                    10117: 'greninja-ash',
+                                    10304: 'raichu-mega-x',
+                                    10305: 'raichu-mega-y'
+                                };
+                                if (fallbackRawById[p.id]) p.rawName = fallbackRawById[p.id];
+                            }
                             const cleanBase = cleanBaseSpeciesName(p._baseSpeciesName || p.name);
                             p._baseSpeciesName = cleanBase;
                             if (p.rawName || p.id === 10117) {
@@ -1228,14 +1243,32 @@ function ensureSearchCache(p) {
         const nl = (p.name || '').toLowerCase();
         const fl = (p.formLabel || '').toLowerCase();
         const aliases = getPokemonAliases(p);
+        const baseNorm = normalizePokemonQuery(cleanBaseSpeciesName(p._baseSpeciesName || p.name));
+        const sharedGenericSet = new Set([
+            'メガシンカz', 'メガ進化z', 'メガシンカx', 'メガ進化x', 'メガシンカy', 'メガ進化y', 'パルデアケンタロス'
+        ]);
         const aliasesNorm = [];
         const aliasesKata = [];
         const aliasesHira = [];
+        const specificAliasesNorm = [];
+        const specificAliasesKata = [];
+        const specificAliasesHira = [];
+
         for (let i = 0; i < aliases.length; i++) {
             const an = normalizePokemonQuery(aliases[i]);
+            if (!an) continue;
+            const ak = toKatakana(an);
+            const ah = toHiragana(an);
             aliasesNorm.push(an);
-            aliasesKata.push(toKatakana(an));
-            aliasesHira.push(toHiragana(an));
+            aliasesKata.push(ak);
+            aliasesHira.push(ah);
+
+            const isSharedGeneric = p.formType !== 'normal' && (an === baseNorm || sharedGenericSet.has(an));
+            if (!isSharedGeneric) {
+                specificAliasesNorm.push(an);
+                specificAliasesKata.push(ak);
+                specificAliasesHira.push(ah);
+            }
         }
         p._sc = {
             name: nl,
@@ -1246,6 +1279,9 @@ function ensureSearchCache(p) {
             aliasesNorm,
             aliasesKata,
             aliasesHira,
+            specificAliasesNorm,
+            specificAliasesKata,
+            specificAliasesHira,
             idStr: p.id.toString(),
             baseIdStr: p.baseId ? p.baseId.toString() : '',
             baseIdPad3: p.baseId ? p.baseId.toString().padStart(3, '0') : '',
@@ -3114,11 +3150,11 @@ function getPokemonAliases(p) {
     }
 
     // メガシンカ
-    if (p.formType === 'mega' || pRaw.includes('mega')) {
+    if (p.formType === 'mega' || /-mega(?:-|$)/.test(pRaw)) {
         let suffix = '';
-        if (pRaw.includes('mega-x') || rawName.endsWith('X')) suffix = 'X';
-        if (pRaw.includes('mega-y') || rawName.endsWith('Y')) suffix = 'Y';
-        if (pRaw.includes('mega-z') || rawName.endsWith('Z')) suffix = 'Z';
+        if (pRaw.includes('mega-x') || /X$/i.test(rawName)) suffix = 'X';
+        if (pRaw.includes('mega-y') || /Y$/i.test(rawName)) suffix = 'Y';
+        if (pRaw.includes('mega-z') || /Z$/i.test(rawName)) suffix = 'Z';
 
         aliases.add(`メガ${baseName}${suffix}`);
         aliases.add(`${baseName}メガ${suffix}`);
@@ -3126,6 +3162,35 @@ function getPokemonAliases(p) {
         aliases.add(`${baseName} (メガシンカ)${suffix}`);
         aliases.add(`${baseName}(メガ)${suffix}`);
         aliases.add(`${baseName} (メガ)${suffix}`);
+
+        if (suffix) {
+            aliases.add(`${baseName}${suffix}`);
+            aliases.add(`${baseName} ${suffix}`);
+            aliases.add(`メガシンカ${baseName}${suffix}`);
+            aliases.add(`${baseName}(メガ${suffix})`);
+            aliases.add(`${baseName} (メガ${suffix})`);
+            aliases.add(`${baseName}(メガシンカ${suffix})`);
+            aliases.add(`${baseName} (メガシンカ${suffix})`);
+            aliases.add(`メガ${baseName}(${suffix})`);
+            aliases.add(`メガ${baseName} (${suffix})`);
+
+            if (suffix === 'X') {
+                aliases.add(`メガ${baseName}エックス`);
+                aliases.add(`メガ${baseName}えっくす`);
+                aliases.add(`${baseName}エックス`);
+                aliases.add(`${baseName}えっくす`);
+            } else if (suffix === 'Y') {
+                aliases.add(`メガ${baseName}ワイ`);
+                aliases.add(`メガ${baseName}わい`);
+                aliases.add(`${baseName}ワイ`);
+                aliases.add(`${baseName}わい`);
+            } else if (suffix === 'Z') {
+                aliases.add(`メガ${baseName}ゼット`);
+                aliases.add(`メガ${baseName}ぜっと`);
+                aliases.add(`${baseName}ゼット`);
+                aliases.add(`${baseName}ぜっと`);
+            }
+        }
 
         // メガメガニウム専用エイリアス強化
         if (baseName === 'メガニウム') {
@@ -3210,44 +3275,105 @@ function getPokemonAliases(p) {
 function normalizePokemonQuery(str) {
     if (!str) return '';
     return str
+        .replace(/[\uff01-\uff5e]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0)) // 全角英数・記号を半角化 (Ｘ/Ｙ/Ｚ対応)
         .toLowerCase()
         .replace(/[\s\u3000\-_・]/g, '') // 空白・ハイフン・中黒・アンダースコアを除去
         .replace(/[（\(\)）]/g, '');     // 括弧を除去
 }
 
-function findPokemonByQuery(rawVal) {
-    if (!rawVal) return null;
+function resolveQuizSubmission(rawVal) {
+    if (!rawVal) return { mode: 'not_found' };
     const cleanRaw = rawVal.trim();
-    if (!cleanRaw) return null;
+    if (!cleanRaw) return { mode: 'not_found' };
 
     const norm = normalizePokemonQuery(cleanRaw);
     const normKata = toKatakana(norm);
     const normHira = toHiragana(norm);
     const canPrefix = normKata.length >= 2;
 
-    let prefixMatched = null;
+    const exactSpecificMatches = [];
+    const exactGeneralMatches = [];
+    const prefixMatches = [];
 
     for (let i = 0; i < pokemonList.length; i++) {
         const p = pokemonList[i];
         const sc = ensureSearchCache(p);
-        const aNorm = sc.aliasesNorm;
-        const aKata = sc.aliasesKata;
-        const aHira = sc.aliasesHira;
 
-        for (let j = 0; j < aNorm.length; j++) {
-            const an = aNorm[j];
-            const ak = aKata[j];
-            const ah = aHira[j];
-            if (an === norm || ak === normKata || ah === normHira) {
-                return p;
-            }
-            if (canPrefix && !prefixMatched && (an.startsWith(norm) || ak.startsWith(normKata) || ah.startsWith(normHira))) {
-                prefixMatched = p;
+        let hitSpecific = false;
+        for (let j = 0; j < sc.specificAliasesNorm.length; j++) {
+            if (sc.specificAliasesNorm[j] === norm || sc.specificAliasesKata[j] === normKata || sc.specificAliasesHira[j] === normHira) {
+                hitSpecific = true;
+                break;
             }
         }
+        if (hitSpecific) {
+            exactSpecificMatches.push(p);
+            continue;
+        }
+
+        let hitGeneral = false;
+        let hitPrefix = false;
+        for (let j = 0; j < sc.aliasesNorm.length; j++) {
+            const an = sc.aliasesNorm[j];
+            const ak = sc.aliasesKata[j];
+            const ah = sc.aliasesHira[j];
+            if (an === norm || ak === normKata || ah === normHira) {
+                hitGeneral = true;
+                break;
+            }
+            if (canPrefix && !hitPrefix && (an.startsWith(norm) || ak.startsWith(normKata) || ah.startsWith(normHira))) {
+                hitPrefix = true;
+            }
+        }
+        if (hitGeneral) exactGeneralMatches.push(p);
+        else if (hitPrefix) prefixMatches.push(p);
     }
 
-    return prefixMatched;
+    // 1. 特定フォルム固有名に1件だけ完全一致した場合 (例: メガリザードンX, メガリザードンY, リザードンX, リザードンY等)
+    if (exactSpecificMatches.length === 1) {
+        const p = exactSpecificMatches[0];
+        const { forms } = findFormsAndSameStats(p);
+        if (p.formType === 'normal' && forms.length > 1) {
+            return { mode: 'ambiguous_normal', pokemon: p, forms, norm };
+        }
+        return { mode: 'exact', pokemon: p, norm };
+    }
+
+    // 2. 前方一致・複数候補 (例: メガリザードン -> XとY、メガミュウツー -> XとY、メガライチュウ -> XとY)
+    const candidates = exactSpecificMatches.length > 1
+        ? exactSpecificMatches
+        : (exactGeneralMatches.length > 0 ? exactGeneralMatches : prefixMatches);
+
+    if (candidates.length === 0) {
+        return { mode: 'not_found' };
+    }
+
+    if (candidates.length === 1) {
+        const single = candidates[0];
+        const { forms } = findFormsAndSameStats(single);
+        if (single.formType === 'normal' && forms.length > 1) {
+            return { mode: 'ambiguous_normal', pokemon: single, forms, norm };
+        }
+        return { mode: 'exact', pokemon: single, norm };
+    }
+
+    const first = candidates[0];
+    const { forms } = findFormsAndSameStats(first);
+    const formIdSet = new Set(forms.map(f => f.id));
+    const allInSameForms = candidates.every(c => formIdSet.has(c.id));
+    const isMegaPrefixedQuery = normKata.startsWith('メガ');
+
+    return {
+        mode: 'ambiguous_form',
+        pokemon: first,
+        forms: (allInSameForms && !isMegaPrefixedQuery) ? forms : candidates,
+        norm
+    };
+}
+
+function findPokemonByQuery(rawVal) {
+    const resolved = resolveQuizSubmission(rawVal);
+    return resolved.pokemon || null;
 }
 
 // 別の姿（フォルム違い・メガ・合体・リージョン）および種族値同一ポケモンの抽出
@@ -3320,15 +3446,22 @@ function handleQuizInputSuggestion() {
             return;
         }
 
-        const matched = findPokemonByQuery(rawVal);
+        const resolved = resolveQuizSubmission(rawVal);
+        if (resolved.mode === 'not_found') {
+            closeQuizFormSelectionPanel();
+            return;
+        }
 
-        if (matched) {
-            const { forms } = findFormsAndSameStats(matched);
-            // 別の姿（メガシンカやリージョンフォームなど）が2つ以上ある場合のみパネルを表示（※同種族値ポケモンは表示しない）
-            if (forms.length > 1) {
-                renderQuizFormSelectionPanel(matched, forms);
-                return;
-            }
+        if (resolved.mode === 'ambiguous_form' && resolved.forms && resolved.forms.length > 1) {
+            renderQuizFormSelectionPanel(resolved.pokemon, resolved.forms, 'auto', resolved.norm);
+            return;
+        }
+
+        const { forms } = findFormsAndSameStats(resolved.pokemon);
+        // 別の姿（メガシンカX・Yやリージョンフォームなど）が2つ以上ある場合はパネルを表示
+        if (forms.length > 1) {
+            renderQuizFormSelectionPanel(resolved.pokemon, forms, 'auto', resolved.norm);
+            return;
         }
         closeQuizFormSelectionPanel();
     }, 200);
@@ -3339,14 +3472,20 @@ function closeQuizFormSelectionPanel() {
     if (panel) {
         panel.classList.add('hidden');
         panel.innerHTML = '';
+        delete panel.dataset.openReason;
+        delete panel.dataset.submitQuery;
     }
 }
 
-function renderQuizFormSelectionPanel(matched, forms) {
+function renderQuizFormSelectionPanel(matched, forms, openReason = 'auto', submitQuery = '') {
     const panel = document.getElementById('quiz-form-selection-panel');
     if (!panel) return;
 
     panel.classList.remove('hidden');
+    panel.dataset.openReason = openReason;
+    panel.dataset.submitQuery = submitQuery || '';
+
+    const titleBaseName = cleanBaseSpeciesName(matched._baseSpeciesName || matched.name) || matched.name;
 
     function renderPokemonCard(p) {
         const badge = getFormBadgeHtml(p);
@@ -3403,7 +3542,7 @@ function renderQuizFormSelectionPanel(matched, forms) {
             <div class="flex items-center justify-between text-xs font-bold text-slate-700 px-1">
                 <span class="flex items-center gap-1.5 text-slate-900 font-black">
                     <i class="fa-solid fa-lightbulb text-amber-500"></i>
-                    <span>「${matched.name}」のフォルム選択：</span>
+                    <span>「${titleBaseName}」のフォルム選択：</span>
                 </span>
                 <button type="button" onclick="closeQuizFormSelectionPanel()" class="text-slate-400 hover:text-slate-600 text-xs px-1 cursor-pointer">
                     <i class="fa-solid fa-xmark"></i> 閉じる
@@ -3507,30 +3646,40 @@ function handleQuizSubmit(e) {
     const rawVal = (input.value || '').trim();
     if (!rawVal) return;
 
-    const found = findPokemonByQuery(rawVal);
+    const resolved = resolveQuizSubmission(rawVal);
 
-    if (!found) {
+    if (resolved.mode === 'not_found') {
         if (errText) errText.textContent = `「${rawVal}」というポケモンは見つかりませんでした。正式名を入力してください。`;
-        errBox.classList.remove('hidden');
+        if (errBox) errBox.classList.remove('hidden');
         return;
     }
 
-    // もし別の姿が存在する場合、パネルを表示してユーザーが選択できるように促す
-    const { forms } = findFormsAndSameStats(found);
     const panel = document.getElementById('quiz-form-selection-panel');
-    const isPanelOpen = panel && !panel.classList.contains('hidden');
 
-    // パネルがまだ開いておらず、かつ複数の姿がある場合はパネルを展開して案内
-    // ※ただしユーザーが「メガリザードンX」のように完全に姿を指定して入力した場合はそのまま回答へ進む
-    const isSpecificFormName = found.formType !== 'normal' && found.name !== (found._baseSpeciesName || '');
-    if (forms.length > 1 && !isPanelOpen && !isSpecificFormName) {
-        renderQuizFormSelectionPanel(found, forms);
+    // メガリザードン（XとYのどちらか未指定）等の複数メガ候補に一致する曖昧入力は絶対に1つに自動確定しない
+    if (resolved.mode === 'ambiguous_form') {
+        renderQuizFormSelectionPanel(resolved.pokemon, resolved.forms, 'submit', resolved.norm);
+        if (errText) errText.textContent = `「${rawVal}」には複数の姿（X・Yなど）があります。下のパネルから選ぶか、X・Y等を付けて入力してください。`;
+        if (errBox) errBox.classList.remove('hidden');
         return;
+    }
+
+    // 通常種名（例: リザードン）で送信した場合：自動サジェスト表示中または未表示の1回目はフォルムパネル案内
+    if (resolved.mode === 'ambiguous_normal') {
+        const isConfirmedSubmit = panel && !panel.classList.contains('hidden')
+            && panel.dataset.openReason === 'submit'
+            && panel.dataset.submitQuery === resolved.norm;
+        if (!isConfirmedSubmit) {
+            renderQuizFormSelectionPanel(resolved.pokemon, resolved.forms, 'submit', resolved.norm);
+            if (errText) errText.textContent = `「${resolved.pokemon.name}」には別の姿があります。下のパネルから選ぶか、通常の「${resolved.pokemon.name}」ならもう一度回答を押してください。`;
+            if (errBox) errBox.classList.remove('hidden');
+            return;
+        }
     }
 
     closeQuizFormSelectionPanel();
     input.value = '';
-    processQuizAnswer(found);
+    processQuizAnswer(resolved.pokemon);
 }
 
 function buildQuizHistoryCardHtml(p, attemptNumber, targetTotal) {
