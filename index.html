@@ -25,9 +25,9 @@
         integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
         crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- カスタムCSS -->
-    <link rel="stylesheet" href="style.css?v=20261121c">
+    <link rel="stylesheet" href="style.css?v=20261124a">
     <!-- アプリケーションロジックJS -->
-    <script src="script.js?v=20261121e" defer></script>
+    <script src="script.js?v=20261124a" defer></script>
 </head>
 
 <body class="min-h-screen text-slate-800 flex flex-col">
@@ -64,7 +64,7 @@
 
                 <div class="flex items-center gap-1.5">
                     <div class="text-xs bg-slate-800 text-slate-300 px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-2"
-                        title="通常種（全国図鑑No.1〜1025）＋メガシンカ・リージョン等の固有種族値フォルム">
+                        title="通常種（全国図鑑）＋メガシンカ・リージョン等の固有種族値フォルム">
                         <i class="fa-solid fa-database text-red-400"></i>
                         <span>読込: <strong id="loaded-count" class="text-white">0</strong> / <span
                                 id="total-target-count">1253</span></span>
@@ -177,7 +177,7 @@
                                 ハードモード
                             </div>
                             <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                                通常種1025種＋メガシンカや別フォルムを含む全<span id="quiz-hard-count">1253</span>匹から出題。
+                                通常種＋メガシンカや別フォルムを含む全<span id="quiz-hard-count">1253</span>匹から出題。
                             </p>
                         </div>
                     </button>
@@ -214,14 +214,14 @@
                             class="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all cursor-pointer border border-slate-200">
                             4〜6世代
                         </button>
-                        <button type="button" onclick="selectGenPreset('late')" title="第7〜9世代 (アローラ・ガラル/ヒスイ・パルデア)"
+                        <button type="button" id="quiz-gen-preset-late" onclick="selectGenPreset('late')" title="第7世代以降の最新世代まで"
                             class="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all cursor-pointer border border-slate-200">
                             7〜9世代
                         </button>
                     </div>
                 </div>
 
-                <!-- 世代カード一覧コンテナ (9世代) -->
+                <!-- 世代カード一覧コンテナ (PokeAPI連携で自動拡張) -->
                 <div id="quiz-gen-cards-container" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-1">
                     <!-- JavaScriptで初期化・レンダリング -->
                 </div>
@@ -232,7 +232,7 @@
                     <div class="flex items-center gap-2 flex-wrap">
                         <i class="fa-solid fa-filter text-rose-500"></i>
                         <span class="font-bold text-slate-600">現在の出題範囲:</span>
-                        <span id="quiz-range-summary-text" class="font-black text-rose-600">全世代 (第1〜9世代) 【ノーマル】</span>
+                        <span id="quiz-range-summary-text" class="font-black text-rose-600">全世代 【ノーマル】</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="text-slate-500">出題候補数:</span>

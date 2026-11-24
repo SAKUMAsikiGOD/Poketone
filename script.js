@@ -55,13 +55,13 @@ function getPokemonImageUrl(p) {
     const id = p.id;
     const baseId = p.baseId || p.id;
 
-    // 特殊フォルム（ID 10001〜）の場合、まずは自身のアートワークURL
-    if (id > 1025) {
+    // 特殊フォルム（ID 10000〜）の場合、まずは自身のアートワークURL
+    if (id >= 10000) {
         return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + id + '.png';
     }
 
-    // 通常種（1〜1025）は全国図鑑番号の公式アートワーク
-    if (baseId > 0 && baseId <= 1025) {
+    // 通常種（1〜9999）は全国図鑑番号の公式アートワーク
+    if (baseId > 0 && baseId < 10000) {
         return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + baseId + '.png';
     }
 
@@ -81,7 +81,7 @@ window.handlePokemonImageError = function (imgEl, pokemonId, baseId) {
     // ステップ1: 特殊フォルムでエラーが出た場合、通常種(base)の公式アートワークを試す
     if (step === 0) {
         imgEl.dataset.fallbackStep = '1';
-        if (base > 0 && base <= 1025) {
+        if (base > 0 && base < 10000) {
             const baseArtworkUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + base + '.png';
             if (!currentSrc.includes('/official-artwork/' + base + '.png')) {
                 imgEl.onerror = function () {
@@ -113,7 +113,7 @@ window.handlePokemonImageError = function (imgEl, pokemonId, baseId) {
     // ステップ3: 通常種のドット絵スプライトを試す
     if (step === 2) {
         imgEl.dataset.fallbackStep = '3';
-        if (base > 0 && base <= 1025) {
+        if (base > 0 && base < 10000) {
             const baseSpriteUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + base + '.png';
             if (!currentSrc.endsWith('/sprites/pokemon/' + base + '.png')) {
                 imgEl.onerror = function () {
@@ -283,6 +283,11 @@ let pokemonList = [];
 let selectedTypes = new Set();
 let currentFormFilter = 'all';
 const TOTAL_POKEMON_TARGET = 1253;
+const API_META_KEY = 'poketone_api_meta_v1';
+const DYNAMIC_GEN_META_KEY = 'poketone_gen_meta_v1';
+let totalPokemonTarget = TOTAL_POKEMON_TARGET;
+let speciesGenMap = {};
+const DYNAMIC_PRE_EVOLUTION_IDS = new Set();
 let isPlayingAudio = false;
 
 // 描画パフォーマンス向上のための変数
@@ -425,10 +430,10 @@ function cleanBaseSpeciesName(name) {
 }
 
 // フォルム情報の自動判定
-function determineFormInfo(rawName, id, speciesName) {
+function determineFormInfo(rawName, id, speciesName, isDefault = null) {
     const baseName = cleanBaseSpeciesName(speciesName);
 
-    if (id <= 1025) {
+    if ((id > 0 && id < 10000) || isDefault === true) {
         return {
             formType: 'normal',
             formLabel: '通常',
@@ -568,10 +573,16 @@ function closeCustomAlert() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof initDynamicGenerationMeta === 'function') {
+        initDynamicGenerationMeta();
+    }
     // 起動直後に即座に内蔵フォールバックデータを適用（0件放置の防止＆画像URL完全補完）
     pokemonList = [...EMBEDDED_FALLBACK_POKEMON]
         .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
         .map(p => { p.image = getPokemonImageUrl(p); return p; });
+    if (typeof rebuildDerivedPokemonMeta === 'function') {
+        rebuildDerivedPokemonMeta();
+    }
     updateLoadedCount();
     updateFormCounts();
 
@@ -678,155 +689,496 @@ function updateFormCounts() {
     });
 }
 
+const POKETONE_CACHE_KEY = 'poketone_clean_v13';
+const POKETONE_SYNC_FLAG_KEY = 'poketone_mega_sync_v13';
+const LEGACY_POKETONE_CACHE_KEYS = [
+    'poketone_clean_v12', 'poketone_clean_v11', 'poketone_clean_v10',
+    'poketone_clean_v9', 'poketone_clean_v8', 'poketone_clean_v7',
+    'poketone_clean_v6', 'poketone_clean_v5', 'poketone_clean_v4',
+    'poketone_clean_v3', 'poketone_clean_v2', 'poketone_clean_v1',
+    'pokestats_master_v1351_all_forms'
+];
+
+function parsePokeApiId(url, resource = '') {
+    if (!url || typeof url !== 'string') return 0;
+    const pattern = resource
+        ? new RegExp(`/${resource}/(\\d+)/?`)
+        : /\/(\d+)\/?$/;
+    const m = url.match(pattern);
+    return m ? parseInt(m[1], 10) : 0;
+}
+
+function extractJapaneseName(names, fallback = '') {
+    if (!Array.isArray(names) || names.length === 0) return fallback;
+    const findByLang = (targets) => names.find(n => targets.includes((n.language?.name || '').toLowerCase()));
+    const entry = findByLang(['ja']) || findByLang(['ja-hrkt']) || findByLang(['roomaji', 'ja-roma']);
+    return entry?.name || fallback;
+}
+
+function loadJsonStorage(key, fallback = null) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+        return fallback;
+    }
+}
+
+function saveJsonStorage(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) { }
+}
+
+function loadApiMeta() {
+    const meta = loadJsonStorage(API_META_KEY, {});
+    return (meta && typeof meta === 'object') ? meta : {};
+}
+
+function saveApiMeta(patch) {
+    const next = { ...loadApiMeta(), ...patch };
+    saveJsonStorage(API_META_KEY, next);
+    return next;
+}
+
+async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+function rebuildDerivedPokemonMeta() {
+    DYNAMIC_PRE_EVOLUTION_IDS.clear();
+    if (!Array.isArray(pokemonList)) return;
+    pokemonList.forEach(p => {
+        if (!p) return;
+        if (p.evolvesFromId && Number.isFinite(p.evolvesFromId)) {
+            DYNAMIC_PRE_EVOLUTION_IDS.add(p.evolvesFromId);
+        }
+        if (p.gen && p.baseId) {
+            speciesGenMap[p.baseId] = p.gen;
+        }
+    });
+}
+
+function refreshSyncUi(shouldRenderPokedex = false) {
+    updateLoadedCount();
+    updateFormCounts();
+    if (shouldRenderPokedex || currentAppMode === 'pokedex') {
+        filterAndRenderPokemon();
+    }
+    if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
+    if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
+}
+
 // 全世代のポケモンが十分に存在するか検証する関数（完全性チェック）
 function checkAllGensPresent(list) {
     if (!list || list.length < 500) return false;
     for (let gen = 1; gen <= 9; gen++) {
         const count = list.filter(p => getPokemonGeneration(p) === gen).length;
-        if (count < 5) return false; // 各世代に最低5匹以上存在すること
+        if (count < 5) return false; // 基本1〜9世代に各最低5匹以上存在すること
     }
     return true;
 }
 
 let isRecoveringData = false;
+let isCheckingApiUpdates = false;
+
+function cleanAndMigrateCachedPokemon(rawList) {
+    const legacyPlaceholderIds = new Set([10535, 10536, 10537, 10538, 10539, 10999]);
+    let cleanedList = rawList
+        .filter(p => p && (p.name || p.rawName))
+        .filter(p => !(p.id === 10284 && p.rawName === 'drampa-mega'))
+        .filter(p => !(p.id === 10069 && p.rawName === 'camerupt-mega'))
+        .filter(p => !(p.id === 10061 && p.rawName === 'audino-mega'))
+        .filter(p => !legacyPlaceholderIds.has(p.id))
+        .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
+        .map(p => {
+            // ID 10165 はヤドラン (ガラルのすがた) であるべき
+            if (p.id === 10165 && (p.rawName?.includes('zigzagoon') || p.name?.includes('ジグザグマ'))) {
+                p.baseId = 80;
+                p.rawName = 'slowbro-galar';
+                p._baseSpeciesName = 'ヤドラン';
+                p.name = 'ヤドラン (ガラルのすがた)';
+                p.formType = 'regional';
+                p.formLabel = 'ガラル';
+                p.types = ['どく', 'エスパー'];
+                p.hp = 95; p.atk = 100; p.def = 95; p.spa = 100; p.spd = 70; p.spe = 30; p.total = 490;
+                p.image = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10165.png';
+                p.cry = 'https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10165.ogg';
+            }
+            // メガニウム / メガヤンマ / メガメガニウム
+            if (p.id === 154) {
+                p.name = 'メガニウム';
+                p._baseSpeciesName = 'メガニウム';
+                p.formType = 'normal';
+                p.formLabel = '通常';
+            } else if (p.id === 469) {
+                p.name = 'メガヤンマ';
+                p._baseSpeciesName = 'メガヤンマ';
+                p.formType = 'normal';
+                p.formLabel = '通常';
+            } else if (p.id === 10282) {
+                p.name = 'メガメガニウム';
+                p._baseSpeciesName = 'メガニウム';
+                p.formType = 'mega';
+                p.formLabel = 'メガシンカ';
+            }
+            if (p.cry && p.cry.includes('/sprites/pokemon/latest/')) {
+                p.cry = p.cry.replace('/sprites/pokemon/latest/', '/cries/pokemon/latest/');
+            }
+            if (!p.rawName) {
+                const fallbackRawById = {
+                    10034: 'charizard-mega-x',
+                    10035: 'charizard-mega-y',
+                    10043: 'mewtwo-mega-x',
+                    10044: 'mewtwo-mega-y',
+                    10117: 'greninja-ash',
+                    10304: 'raichu-mega-x',
+                    10305: 'raichu-mega-y'
+                };
+                if (fallbackRawById[p.id]) p.rawName = fallbackRawById[p.id];
+            }
+            const cleanBase = cleanBaseSpeciesName(p._baseSpeciesName || p.name);
+            p._baseSpeciesName = cleanBase;
+            if (p.rawName || p.id === 10117) {
+                const parsed = determineFormInfo(p.rawName || 'greninja-ash', p.id, cleanBase, p.id < 10000);
+                p.formType = parsed.formType;
+                p.formLabel = parsed.formLabel;
+                p.name = parsed.displayName;
+            } else if (p.formType === 'normal') {
+                p.name = cleanBase;
+            }
+            // 画像URLの完全補完（空・無効・モンスターボールなら正しい公式アートワークURLを自動設定）
+            if (!p.image || typeof p.image !== 'string' || !p.image.startsWith('http') || p.image.includes('data:image')) {
+                p.image = getPokemonImageUrl(p);
+            }
+            return p;
+        });
+
+    // 必須のフォールバックポケモン（最新メガシンカ・全リージョンフォーム等）で欠けているものを補充
+    EMBEDDED_FALLBACK_POKEMON.forEach(fb => {
+        if (!cleanedList.some(p => p.id === fb.id || (fb.rawName && p.rawName === fb.rawName))) {
+            cleanedList.push({ ...fb });
+        }
+    });
+
+    // ソート: 全国図鑑番号（baseId）順かつ同一番号内はID順
+    cleanedList.sort((a, b) => {
+        const bA = a.baseId || a.id;
+        const bB = b.baseId || b.id;
+        if (bA === bB) return a.id - b.id;
+        return bA - bB;
+    });
+
+    return cleanedList;
+}
+
+async function syncPokemonDeltaFromApi({ isBackground = false, forceRefresh = false, showSyncBannerWhenNeeded = false } = {}) {
+    const prevAvailableSet = typeof getAvailableGenerations === 'function'
+        ? new Set(getAvailableGenerations())
+        : new Set();
+
+    let genListData = null;
+    if (typeof syncGenerationsFromPokeApi === 'function') {
+        genListData = await syncGenerationsFromPokeApi(forceRefresh);
+    }
+
+    const timeoutMs = forceRefresh ? 15000 : 7000;
+    const data = await fetchJsonWithTimeout('https://pokeapi.co/api/v2/pokemon?limit=10000', timeoutMs);
+
+    const allItems = (data.results || []).filter(item => {
+        const id = parsePokeApiId(item.url, 'pokemon');
+        return !shouldExcludePokemon(item.name, id);
+    });
+
+    if (allItems.length > 0) {
+        totalPokemonTarget = allItems.length;
+    }
+
+    const targetEl = document.getElementById('total-target-count');
+    if (targetEl) targetEl.textContent = totalPokemonTarget;
+
+    let loaded = [...pokemonList];
+    const speciesMetaCache = {};
+
+    loaded.forEach(p => {
+        if (p.baseId && p.formType === 'normal') {
+            speciesMetaCache[p.baseId] = {
+                name: p.name,
+                gen: p.gen || speciesGenMap[p.baseId] || null,
+                evolvesFromId: p.evolvesFromId || null
+            };
+        }
+    });
+
+    // まだ取得していない差分ポケモンだけを抽出（既存分でconsecutiveErrorsが誤カウントされるのを防ぐ）
+    const itemsToFetch = allItems.filter(item => {
+        const id = parsePokeApiId(item.url, 'pokemon');
+        if (!id) return false;
+        const existingIndex = loaded.findIndex(p => p.id === id);
+        return !(existingIndex > -1 && loaded[existingIndex].formType);
+    });
+
+    const loadingBanner = document.getElementById('loading-banner');
+    const loadingText = document.getElementById('loading-text');
+    const shouldShowBanner = (!isBackground || (showSyncBannerWhenNeeded && itemsToFetch.length > 0));
+
+    if (shouldShowBanner && itemsToFetch.length > 0) {
+        if (loadingBanner) loadingBanner.classList.remove('hidden');
+        if (loadingText) {
+            loadingText.textContent = isBackground
+                ? `新ポケモンデータを同期中... (残り ${itemsToFetch.length} 件)`
+                : 'PokeAPIから全ポケモンデータを取得・同期中...（そのままプレイ可能です）';
+        }
+    }
+
+    const batchSize = 25;
+    let consecutiveErrors = 0;
+
+    for (let i = 0; i < itemsToFetch.length; i += batchSize) {
+        if (consecutiveErrors >= 3) {
+            console.warn("Too many network errors, stopping PokeAPI fetch and using current loaded pokemon.");
+            break;
+        }
+
+        const batch = itemsToFetch.slice(i, i + batchSize);
+        let batchSuccessCount = 0;
+
+        const promises = batch.map(async (item) => {
+            const id = parsePokeApiId(item.url, 'pokemon');
+            if (!id || shouldExcludePokemon(item.name, id)) return;
+
+            try {
+                const pData = await fetchJsonWithTimeout(item.url, 10000);
+                const baseId = parsePokeApiId(pData.species?.url, 'pokemon-species') || id;
+
+                if (shouldExcludePokemon(pData.name, id, baseId)) return;
+
+                let spMeta = speciesMetaCache[baseId];
+                if (!spMeta || !spMeta.gen) {
+                    try {
+                        const sUrl = pData.species?.url || (`https://pokeapi.co/api/v2/pokemon-species/${baseId}/`);
+                        const sData = await fetchJsonWithTimeout(sUrl, 10000);
+                        const jpName = extractJapaneseName(sData.names, spMeta?.name || pData.name);
+                        const genNum = parsePokeApiId(sData.generation?.url, 'generation') || speciesGenMap[baseId] || null;
+                        const evolvesFromId = parsePokeApiId(sData.evolves_from_species?.url, 'pokemon-species') || null;
+                        spMeta = { name: jpName, gen: genNum, evolvesFromId };
+                        speciesMetaCache[baseId] = spMeta;
+
+                        if (genNum && typeof ensureGenerationRegistered === 'function') {
+                            ensureGenerationRegistered(genNum);
+                        }
+                    } catch (e) {
+                        spMeta = {
+                            name: spMeta?.name || pData.name,
+                            gen: spMeta?.gen || speciesGenMap[baseId] || null,
+                            evolvesFromId: spMeta?.evolvesFromId || null
+                        };
+                    }
+                }
+
+                const speciesName = spMeta.name || pData.name;
+                const formInfo = determineFormInfo(pData.name, id, speciesName, pData.is_default);
+                const types = (pData.types || []).map(t => typeEnToJp[t.type.name] || t.type.name);
+                const stats = {};
+                (pData.stats || []).forEach(st => {
+                    if (st.stat.name === 'hp') stats.hp = st.base_stat;
+                    if (st.stat.name === 'attack') stats.atk = st.base_stat;
+                    if (st.stat.name === 'defense') stats.def = st.base_stat;
+                    if (st.stat.name === 'special-attack') stats.spa = st.base_stat;
+                    if (st.stat.name === 'special-defense') stats.spd = st.base_stat;
+                    if (st.stat.name === 'speed') stats.spe = st.base_stat;
+                });
+                const total = (stats.hp || 0) + (stats.atk || 0) + (stats.def || 0) + (stats.spa || 0) + (stats.spd || 0) + (stats.spe || 0);
+
+                const image = pData.sprites?.other?.['official-artwork']?.front_default
+                    || pData.sprites?.front_default
+                    || ('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + baseId + '.png');
+
+                const cry = pData.cries?.latest
+                    || ('https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/' + id + '.ogg');
+
+                const pokemonObj = {
+                    id,
+                    baseId,
+                    _baseSpeciesName: cleanBaseSpeciesName(speciesName),
+                    rawName: pData.name,
+                    name: formInfo.displayName,
+                    formType: formInfo.formType,
+                    formLabel: formInfo.formLabel,
+                    types,
+                    ...stats,
+                    total,
+                    image,
+                    cry
+                };
+                if (spMeta.gen) pokemonObj.gen = spMeta.gen;
+                if (spMeta.evolvesFromId) pokemonObj.evolvesFromId = spMeta.evolvesFromId;
+
+                const existingIdx = loaded.findIndex(p => p.id === id || (p.rawName && p.rawName === pData.name));
+                if (existingIdx > -1) {
+                    loaded[existingIdx] = pokemonObj;
+                } else {
+                    loaded.push(pokemonObj);
+                }
+                batchSuccessCount++;
+            } catch (err) {
+                // 個別取得エラーはスキップ
+            }
+        });
+
+        await Promise.all(promises);
+
+        consecutiveErrors = (batchSuccessCount === 0 && batch.length > 0) ? consecutiveErrors + 1 : 0;
+
+        // ソート
+        pokemonList = loaded.filter(p => !shouldExcludePokemon(p.rawName, p.id, p.baseId)).sort((a, b) => {
+            if (a.baseId === b.baseId) return a.id - b.id;
+            return a.baseId - b.baseId;
+        });
+
+        rebuildDerivedPokemonMeta();
+        if (typeof syncSelectionWithNewGenerations === 'function') {
+            syncSelectionWithNewGenerations(prevAvailableSet);
+        }
+
+        // キャッシュ書き込みの間引き
+        const batchStep = Math.floor(i / batchSize);
+        const isLastBatch = (i + batchSize) >= itemsToFetch.length;
+        if (batchStep % 5 === 0 || isLastBatch) {
+            saveJsonStorage(POKETONE_CACHE_KEY, pokemonList);
+        }
+
+        refreshSyncUi(false);
+
+        if (shouldShowBanner) {
+            const percent = Math.min(100, Math.round((pokemonList.length / Math.max(allItems.length, 1)) * 100));
+            const pBar = document.getElementById('loading-progress');
+            if (pBar) pBar.style.width = percent + '%';
+        }
+    }
+
+    rebuildDerivedPokemonMeta();
+    if (typeof syncSelectionWithNewGenerations === 'function') {
+        syncSelectionWithNewGenerations(prevAvailableSet);
+    }
+
+    // 全件取得が完了した場合のみ、メタ情報・同期フラグを保存
+    if (pokemonList.length >= 1000 && consecutiveErrors < 3) {
+        try {
+            localStorage.setItem('poketone_cache_complete', 'true');
+            localStorage.setItem(POKETONE_SYNC_FLAG_KEY, 'true');
+        } catch (e) { }
+        saveJsonStorage(POKETONE_CACHE_KEY, pokemonList);
+        saveApiMeta({
+            apiTotalCount: data.count || allItems.length,
+            apiGenCount: genListData?.count || loadApiMeta().apiGenCount || Object.keys(GENERATION_CONFIG).length,
+            effectiveTargetCount: allItems.length,
+            speciesGenMap,
+            lastCheckedAt: Date.now()
+        });
+        console.log("Full sync complete! Total loaded:", pokemonList.length);
+    }
+
+    refreshSyncUi(currentAppMode === 'pokedex');
+    if (loadingBanner) loadingBanner.classList.add('hidden');
+}
+
+async function checkAndSyncPokeApiUpdatesInBackground() {
+    if (isCheckingApiUpdates || isRecoveringData) return;
+    isCheckingApiUpdates = true;
+    const prevAvailableSet = typeof getAvailableGenerations === 'function'
+        ? new Set(getAvailableGenerations())
+        : new Set();
+
+    try {
+        const [genList, pokeHead] = await Promise.all([
+            fetchJsonWithTimeout('https://pokeapi.co/api/v2/generation', 5000),
+            fetchJsonWithTimeout('https://pokeapi.co/api/v2/pokemon?limit=1', 5000)
+        ]);
+
+        const apiMeta = loadApiMeta();
+        const genResults = Array.isArray(genList?.results) ? genList.results : [];
+        const hasNewGen = genResults.some(item => {
+            const gId = parsePokeApiId(item.url, 'generation');
+            return gId > 0 && !GENERATION_CONFIG[gId];
+        }) || (genList?.count && genList.count !== apiMeta.apiGenCount);
+
+        if (hasNewGen && typeof syncGenerationsFromPokeApi === 'function') {
+            await syncGenerationsFromPokeApi(false, genList);
+            if (typeof syncSelectionWithNewGenerations === 'function') {
+                syncSelectionWithNewGenerations(prevAvailableSet);
+            }
+            refreshSyncUi(false);
+        }
+
+        const apiTotalChanged = !apiMeta.apiTotalCount || (pokeHead?.count && pokeHead.count !== apiMeta.apiTotalCount);
+        if (apiTotalChanged) {
+            await syncPokemonDeltaFromApi({
+                isBackground: true,
+                forceRefresh: false,
+                showSyncBannerWhenNeeded: true
+            });
+        } else {
+            saveApiMeta({
+                apiGenCount: genList?.count || apiMeta.apiGenCount,
+                lastCheckedAt: Date.now()
+            });
+        }
+    } catch (e) {
+        console.warn("Background PokeAPI update check skipped:", e);
+    } finally {
+        isCheckingApiUpdates = false;
+    }
+}
 
 async function fetchOptimizedPokemonData(forceRefresh = false) {
-    const CACHE_KEY = 'poketone_clean_v13';
-    const SYNC_FLAG_KEY = 'poketone_mega_sync_v13';
     let isBackgroundDiffSync = false;
 
     // 1. 既存キャッシュの探索 (forceRefresh でない場合のみ)
     if (!forceRefresh) {
-        const cached = localStorage.getItem(CACHE_KEY) ||
-            localStorage.getItem('poketone_clean_v12') ||
-            localStorage.getItem('poketone_clean_v11') ||
-            localStorage.getItem('poketone_clean_v10') ||
-            localStorage.getItem('poketone_clean_v9') ||
-            localStorage.getItem('poketone_clean_v8') ||
-            localStorage.getItem('poketone_clean_v7') ||
-            localStorage.getItem('poketone_clean_v6') ||
-            localStorage.getItem('poketone_clean_v5') ||
-            localStorage.getItem('poketone_clean_v4') ||
-            localStorage.getItem('poketone_clean_v3') ||
-            localStorage.getItem('poketone_clean_v2') ||
-            localStorage.getItem('poketone_clean_v1') ||
-            localStorage.getItem('pokestats_master_v1351_all_forms');
+        let cached = null;
+        try {
+            cached = localStorage.getItem(POKETONE_CACHE_KEY);
+            if (!cached) {
+                for (const key of LEGACY_POKETONE_CACHE_KEYS) {
+                    cached = localStorage.getItem(key);
+                    if (cached) break;
+                }
+            }
+        } catch (e) { }
 
         if (cached) {
             try {
                 const rawList = JSON.parse(cached);
                 if (Array.isArray(rawList) && rawList.length > 0) {
-                    const legacyPlaceholderIds = new Set([10535, 10536, 10537, 10538, 10539, 10999]);
-                    let cleanedList = rawList
-                        .filter(p => p && (p.name || p.rawName))
-                        .filter(p => !(p.id === 10284 && p.rawName === 'drampa-mega'))
-                        .filter(p => !(p.id === 10069 && p.rawName === 'camerupt-mega'))
-                        .filter(p => !(p.id === 10061 && p.rawName === 'audino-mega'))
-                        .filter(p => !legacyPlaceholderIds.has(p.id))
-                        .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
-                        .map(p => {
-                            // ID 10165 はヤドラン (ガラルのすがた) であるべき
-                            if (p.id === 10165 && (p.rawName?.includes('zigzagoon') || p.name?.includes('ジグザグマ'))) {
-                                p.baseId = 80;
-                                p.rawName = 'slowbro-galar';
-                                p._baseSpeciesName = 'ヤドラン';
-                                p.name = 'ヤドラン (ガラルのすがた)';
-                                p.formType = 'regional';
-                                p.formLabel = 'ガラル';
-                                p.types = ['どく', 'エスパー'];
-                                p.hp = 95; p.atk = 100; p.def = 95; p.spa = 100; p.spd = 70; p.spe = 30; p.total = 490;
-                                p.image = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/10165.png';
-                                p.cry = 'https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/10165.ogg';
-                            }
-                            // メガニウム / メガヤンマ / メガメガニウム
-                            if (p.id === 154) {
-                                p.name = 'メガニウム';
-                                p._baseSpeciesName = 'メガニウム';
-                                p.formType = 'normal';
-                                p.formLabel = '通常';
-                            } else if (p.id === 469) {
-                                p.name = 'メガヤンマ';
-                                p._baseSpeciesName = 'メガヤンマ';
-                                p.formType = 'normal';
-                                p.formLabel = '通常';
-                            } else if (p.id === 10282) {
-                                p.name = 'メガメガニウム';
-                                p._baseSpeciesName = 'メガニウム';
-                                p.formType = 'mega';
-                                p.formLabel = 'メガシンカ';
-                            }
-                            if (p.cry && p.cry.includes('/sprites/pokemon/latest/')) {
-                                p.cry = p.cry.replace('/sprites/pokemon/latest/', '/cries/pokemon/latest/');
-                            }
-                            if (!p.rawName) {
-                                const fallbackRawById = {
-                                    10034: 'charizard-mega-x',
-                                    10035: 'charizard-mega-y',
-                                    10043: 'mewtwo-mega-x',
-                                    10044: 'mewtwo-mega-y',
-                                    10117: 'greninja-ash',
-                                    10304: 'raichu-mega-x',
-                                    10305: 'raichu-mega-y'
-                                };
-                                if (fallbackRawById[p.id]) p.rawName = fallbackRawById[p.id];
-                            }
-                            const cleanBase = cleanBaseSpeciesName(p._baseSpeciesName || p.name);
-                            p._baseSpeciesName = cleanBase;
-                            if (p.rawName || p.id === 10117) {
-                                const parsed = determineFormInfo(p.rawName || 'greninja-ash', p.id, cleanBase);
-                                p.formType = parsed.formType;
-                                p.formLabel = parsed.formLabel;
-                                p.name = parsed.displayName;
-                            } else if (p.formType === 'normal') {
-                                p.name = cleanBase;
-                            }
-                            // 画像URLの完全補完（空・無効・モンスターボールなら正しい公式アートワークURLを自動設定）
-                            if (!p.image || typeof p.image !== 'string' || !p.image.startsWith('http') || p.image.includes('data:image')) {
-                                p.image = getPokemonImageUrl(p);
-                            }
-                            return p;
-                        });
+                    pokemonList = cleanAndMigrateCachedPokemon(rawList);
+                    rebuildDerivedPokemonMeta();
+                    saveJsonStorage(POKETONE_CACHE_KEY, pokemonList);
 
-                    // 必須のフォールバックポケモン（最新メガシンカ・全リージョンフォーム等）で欠けているものを補充
-                    EMBEDDED_FALLBACK_POKEMON.forEach(fb => {
-                        if (!cleanedList.some(p => p.id === fb.id || (fb.rawName && p.rawName === fb.rawName))) {
-                            cleanedList.push(fb);
-                        }
-                    });
+                    refreshSyncUi(true);
 
-                    // ソート: 全国図鑑番号（baseId）順かつ同一番号内はID順
-                    cleanedList.sort((a, b) => {
-                        const bA = a.baseId || a.id;
-                        const bB = b.baseId || b.id;
-                        if (bA === bB) return a.id - b.id;
-                        return bA - bB;
-                    });
-
-                    pokemonList = cleanedList;
-
-                    // キャッシュを最新キーに同期保存
-                    try {
-                        localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
-                    } catch (e) { }
-
-                    updateLoadedCount();
-                    updateFormCounts();
-                    filterAndRenderPokemon();
-                    if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
-                    if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
-
-                    // キャッシュ完全性チェック（1000件以上かつ全世代揃っており、最新メガ同期済みなら即終了）
+                    // キャッシュ完全性チェック（1000件以上かつ全世代揃っており、同期済みなら即表示＋裏で新データ差分チェック）
                     const isComplete = (pokemonList.length >= 1000) && checkAllGensPresent(pokemonList);
-                    const hasSyncedLatestMegas = localStorage.getItem(SYNC_FLAG_KEY) === 'true';
-                    if (isComplete && hasSyncedLatestMegas) {
+                    const hasSyncedLatest = localStorage.getItem(POKETONE_SYNC_FLAG_KEY) === 'true';
+                    if (isComplete && hasSyncedLatest) {
                         const banner = document.getElementById('loading-banner');
                         if (banner) banner.classList.add('hidden');
                         updateLoadedCount();
                         console.log("Loaded " + pokemonList.length + " pokemon from cache successfully (Complete data).");
+                        // 新ポケモンや新世代が PokeAPI に追加されていないかバックグラウンドで確認
+                        checkAndSyncPokeApiUpdatesInBackground();
                         return;
                     } else if (isComplete) {
                         isBackgroundDiffSync = true;
-                        console.log("Loaded cached data (" + pokemonList.length + "). Checking PokeAPI in background for new mega evolutions...");
+                        console.log("Loaded cached data (" + pokemonList.length + "). Checking PokeAPI in background for updates...");
                     } else {
                         console.warn("Cached data is incomplete (" + pokemonList.length + " pokemon). Auto-continuing background sync from PokeAPI...");
                     }
@@ -838,30 +1190,25 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
     } else {
         console.log("Force refresh requested. Clearing cache and fetching fresh data from PokeAPI...");
         try {
-            localStorage.removeItem(CACHE_KEY);
-            localStorage.removeItem('poketone_clean_v12');
-            localStorage.removeItem('poketone_clean_v11');
-            localStorage.removeItem('poketone_clean_v10');
-            localStorage.removeItem('poketone_clean_v9');
-            localStorage.removeItem('poketone_clean_v8');
-            localStorage.removeItem('poketone_clean_v7');
-            localStorage.removeItem('poketone_cache_complete');
-            localStorage.removeItem('poketone_mega_sync_v12');
-            localStorage.removeItem(SYNC_FLAG_KEY);
+            [
+                POKETONE_CACHE_KEY, POKETONE_SYNC_FLAG_KEY, API_META_KEY, DYNAMIC_GEN_META_KEY,
+                'poketone_cache_complete', 'poketone_mega_sync_v12', ...LEGACY_POKETONE_CACHE_KEYS
+            ].forEach(k => localStorage.removeItem(k));
         } catch (e) { }
+        speciesGenMap = {};
+        if (typeof resetDynamicGenerationConfig === 'function') {
+            resetDynamicGenerationConfig();
+        }
     }
 
     // 初期状態は内蔵フォールバックを表示（画像URL完全補完）
     if (!pokemonList || pokemonList.length === 0) {
         pokemonList = [...EMBEDDED_FALLBACK_POKEMON]
             .filter(p => !shouldExcludePokemon(p.rawName || p.name, p.id, p.baseId))
-            .map(p => { p.image = getPokemonImageUrl(p); return p; });
+            .map(p => ({ ...p, image: getPokemonImageUrl(p) }));
+        rebuildDerivedPokemonMeta();
     }
-    updateLoadedCount();
-    updateFormCounts();
-    filterAndRenderPokemon();
-    if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
-    if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
+    refreshSyncUi(true);
 
     // 2. ネットワーク経由での取得（未取得分の差分取得または再同期）
     try {
@@ -872,196 +1219,11 @@ async function fetchOptimizedPokemonData(forceRefresh = false) {
             if (loadingText) loadingText.textContent = "PokeAPIから全ポケモンデータを取得・同期中...（そのままプレイ可能です）";
         }
 
-        const controller = new AbortController();
-        const timeoutMs = forceRefresh ? 15000 : 7000;
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=10000', { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (!res.ok) throw new Error('PokeAPI response not OK');
-        const data = await res.json();
-
-        const allItems = data.results.filter(item => {
-            const idMatch = item.url.match(/\/pokemon\/(\d+)\//);
-            const id = idMatch ? parseInt(idMatch[1]) : 0;
-            return !shouldExcludePokemon(item.name, id);
+        await syncPokemonDeltaFromApi({
+            isBackground: isBackgroundDiffSync,
+            forceRefresh,
+            showSyncBannerWhenNeeded: true
         });
-
-        const targetEl = document.getElementById('total-target-count');
-        if (targetEl) targetEl.textContent = allItems.length;
-
-        let loaded = [...pokemonList];
-        const speciesNameCache = {};
-
-        loaded.forEach(p => {
-            if (p.baseId && p.formType === 'normal') {
-                speciesNameCache[p.baseId] = p.name;
-            }
-        });
-
-        // まだ取得していない差分ポケモンだけを抽出（既存分でconsecutiveErrorsが誤カウントされるのを防ぐ）
-        const itemsToFetch = allItems.filter(item => {
-            const idMatch = item.url.match(/\/pokemon\/(\d+)\//);
-            const id = idMatch ? parseInt(idMatch[1]) : 0;
-            if (!id) return false;
-            const existingIndex = loaded.findIndex(p => p.id === id);
-            return !(existingIndex > -1 && loaded[existingIndex].formType);
-        });
-
-        const batchSize = 25;
-        let consecutiveErrors = 0;
-
-        for (let i = 0; i < itemsToFetch.length; i += batchSize) {
-            if (consecutiveErrors >= 3) {
-                console.warn("Too many network errors, stopping PokeAPI fetch and using current loaded pokemon.");
-                break;
-            }
-
-            const batch = itemsToFetch.slice(i, i + batchSize);
-            let batchSuccessCount = 0;
-
-            const promises = batch.map(async (item) => {
-                const idMatch = item.url.match(/\/pokemon\/(\d+)\//);
-                const id = idMatch ? parseInt(idMatch[1]) : 0;
-                if (!id) return;
-                if (shouldExcludePokemon(item.name, id)) return;
-
-                try {
-                    const pRes = await fetch(item.url);
-                    if (!pRes.ok) return;
-                    const pData = await pRes.json();
-
-                    let baseId = id;
-                    let speciesUrl = pData.species?.url;
-                    if (speciesUrl) {
-                        const m = speciesUrl.match(/\/pokemon-species\/(\d+)\//);
-                        if (m) baseId = parseInt(m[1]);
-                    }
-
-                    if (shouldExcludePokemon(pData.name, id, baseId)) return;
-
-                    let speciesName = speciesNameCache[baseId];
-                    if (!speciesName) {
-                        try {
-                            const sRes = await fetch(speciesUrl || ('https://pokeapi.co/api/v2/pokemon-species/' + baseId + '/'));
-                            if (sRes.ok) {
-                                const sData = await sRes.json();
-                                const jpObj = sData.names?.find(n => n.language.name === 'ja') ||
-                                    sData.names?.find(n => n.language.name === 'ja-Hrkt' || n.language.name === 'ja-hrkt') ||
-                                    sData.names?.find(n => n.language.name === 'roomaji' || n.language.name === 'ja-roma');
-                                speciesName = jpObj ? jpObj.name : pData.name;
-                                speciesNameCache[baseId] = speciesName;
-                            } else {
-                                speciesName = pData.name;
-                            }
-                        } catch (e) {
-                            speciesName = pData.name;
-                        }
-                    }
-
-                    const formInfo = determineFormInfo(pData.name, id, speciesName);
-                    const name = formInfo.displayName;
-
-                    const types = (pData.types || []).map(t => typeEnToJp[t.type.name] || t.type.name);
-                    const stats = {};
-                    (pData.stats || []).forEach(st => {
-                        if (st.stat.name === 'hp') stats.hp = st.base_stat;
-                        if (st.stat.name === 'attack') stats.atk = st.base_stat;
-                        if (st.stat.name === 'defense') stats.def = st.base_stat;
-                        if (st.stat.name === 'special-attack') stats.spa = st.base_stat;
-                        if (st.stat.name === 'special-defense') stats.spd = st.base_stat;
-                        if (st.stat.name === 'speed') stats.spe = st.base_stat;
-                    });
-                    const total = (stats.hp || 0) + (stats.atk || 0) + (stats.def || 0) + (stats.spa || 0) + (stats.spd || 0) + (stats.spe || 0);
-
-                    const image = pData.sprites?.other?.['official-artwork']?.front_default
-                        || pData.sprites?.front_default
-                        || ('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + baseId + '.png');
-
-                    const cry = pData.cries?.latest
-                        || ('https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/' + id + '.ogg');
-
-                    const pokemonObj = {
-                        id,
-                        baseId,
-                        _baseSpeciesName: cleanBaseSpeciesName(speciesName),
-                        rawName: pData.name,
-                        name,
-                        formType: formInfo.formType,
-                        formLabel: formInfo.formLabel,
-                        types,
-                        ...stats,
-                        total,
-                        image,
-                        cry
-                    };
-
-                    const existingIdx = loaded.findIndex(p => p.id === id || (p.rawName && p.rawName === pData.name));
-                    if (existingIdx > -1) {
-                        loaded[existingIdx] = pokemonObj;
-                    } else {
-                        loaded.push(pokemonObj);
-                    }
-                    batchSuccessCount++;
-                } catch (err) {
-                    // 個別取得エラーはスキップ
-                }
-            });
-
-            await Promise.all(promises);
-
-            if (batchSuccessCount === 0 && batch.length > 0) {
-                consecutiveErrors++;
-            } else {
-                consecutiveErrors = 0;
-            }
-
-            // ソート
-            pokemonList = loaded.filter(p => !shouldExcludePokemon(p.rawName, p.id, p.baseId)).sort((a, b) => {
-                if (a.baseId === b.baseId) return a.id - b.id;
-                return a.baseId - b.baseId;
-            });
-
-            // バックグラウンド同期負荷軽減のため、キャッシュ保存は一定バッチごとに間引き、
-            // 図鑑グリッド再描画は図鑑モード表示中のみ行う
-            const batchStep = Math.floor(i / batchSize);
-            const isLastBatch = (i + batchSize) >= itemsToFetch.length;
-            if (batchStep % 5 === 0 || isLastBatch) {
-                try {
-                    localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
-                } catch (e) { }
-            }
-
-            updateLoadedCount();
-            updateFormCounts();
-            if (currentAppMode === 'pokedex') {
-                filterAndRenderPokemon();
-            }
-
-            if (!isBackgroundDiffSync) {
-                const percent = Math.min(100, Math.round((pokemonList.length / allItems.length) * 100));
-                const pBar = document.getElementById('loading-progress');
-                if (pBar) pBar.style.width = percent + '%';
-            }
-        }
-
-        // 全件の取得が完了した場合のみ、完全キャッシュ完了フラグと最新メガ同期フラグをセット
-        if (pokemonList.length >= 1000 && consecutiveErrors < 3) {
-            try {
-                localStorage.setItem('poketone_cache_complete', 'true');
-                localStorage.setItem(SYNC_FLAG_KEY, 'true');
-                localStorage.setItem(CACHE_KEY, JSON.stringify(pokemonList));
-            } catch (e) { }
-            console.log("Full sync complete! Total loaded:", pokemonList.length);
-        }
-
-        if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
-        if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
-
-        const banner = document.getElementById('loading-banner');
-        if (banner) banner.classList.add('hidden');
-        updateLoadedCount();
     } catch (error) {
         console.warn("Network or PokeAPI error, using current loaded / embedded fallback data.", error);
         const loadingText = document.getElementById('loading-text');
@@ -1090,9 +1252,7 @@ async function triggerAutoDataRecovery(autoStartQuiz = true) {
 
     try {
         await fetchOptimizedPokemonData(true);
-        updateLoadedCount();
-        if (typeof renderQuizGenCards === 'function') renderQuizGenCards();
-        if (typeof updateQuizRangeSummary === 'function') updateQuizRangeSummary();
+        refreshSyncUi(false);
         isRecoveringData = false;
 
         if (autoStartQuiz) {
@@ -1135,7 +1295,7 @@ function updateLoadedCount() {
     // 読み込み完了後（またはキャッシュロード完了時）は、実際のデータ件数に最大数（分母）を同期
     const displayTotal = (isFinished && pokemonList.length >= 1000)
         ? pokemonList.length
-        : (pokemonList.length > 0 ? Math.max(pokemonList.length, TOTAL_POKEMON_TARGET) : TOTAL_POKEMON_TARGET);
+        : (pokemonList.length > 0 ? Math.max(pokemonList.length, totalPokemonTarget) : totalPokemonTarget);
 
     if (targetEl) {
         targetEl.textContent = displayTotal;
@@ -1746,7 +1906,7 @@ function playPokemonCrySafe(p, allowBaseFallback = false) {
     if (!p) return;
     if (typeof unlockAudioPlayback === 'function') unlockAudioPlayback();
 
-    const isSpecialForm = (p.id > 1025) || (p.formType && p.formType !== 'normal');
+    const isSpecialForm = (p.id >= 10000) || (p.formType && p.formType !== 'normal');
 
     // 特殊フォルム（メガシンカ、リージョンフォームなど）の場合
     if (isSpecialForm) {
@@ -2541,7 +2701,7 @@ function backToQuizModeSelect() {
 
 // ================= 世代・地方別設定 & 絞り込みロジック =================
 let quizSelectedDifficulty = 'normal'; // 'normal' | 'hard'
-let quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]); // デフォルト全世代
+let quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]); // 初期化時に動的世代も自動反映
 
 // 互換用
 let genQuizDifficulty = 'normal';
@@ -2605,7 +2765,7 @@ function toggleGenFilter(genNum) {
 
 // 全世代選択
 function selectAllGenFilters() {
-    quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    quizSelectedGens = new Set(getAvailableGenerations());
     renderQuizGenCards();
     updateQuizRangeSummary();
 }
@@ -2619,12 +2779,13 @@ function clearAllGenFilters() {
 
 // プリセット
 function selectGenPreset(preset) {
+    const allGens = getAvailableGenerations();
     if (preset === 'early') {
-        quizSelectedGens = new Set([1, 2, 3]);
+        quizSelectedGens = new Set(allGens.filter(g => g >= 1 && g <= 3));
     } else if (preset === 'mid') {
-        quizSelectedGens = new Set([4, 5, 6]);
+        quizSelectedGens = new Set(allGens.filter(g => g >= 4 && g <= 6));
     } else if (preset === 'late') {
-        quizSelectedGens = new Set([7, 8, 9]);
+        quizSelectedGens = new Set(allGens.filter(g => g >= 7));
     }
     renderQuizGenCards();
     updateQuizRangeSummary();
@@ -2689,14 +2850,14 @@ function isFullyEvolvedPokemon(p) {
     // メガシンカ・ゲンシカイキは常に最終形態
     if (p.formType === 'mega') return true;
     const baseId = p.baseId || p.id;
-    // 進化前リストに含まれている場合は除外
-    if (PRE_EVOLUTION_BASE_IDS.has(baseId)) {
+    // 手動リストまたはAPIの evolves_from_species から自動構築した進化前リストに含まれている場合は除外
+    if (PRE_EVOLUTION_BASE_IDS.has(baseId) || DYNAMIC_PRE_EVOLUTION_IDS.has(baseId)) {
         return false;
     }
     return true;
 }
 
-const GENERATION_CONFIG = {
+const BASE_GENERATION_CONFIG = {
     1: { id: 1, name: '第1世代', region: 'カントー', minId: 1, maxId: 151, label: '第1世代 (カントー)', sub: '赤・緑・青・ピカチュウ', icon: 'fa-gamepad', color: 'red' },
     2: { id: 2, name: '第2世代', region: 'ジョウト', minId: 152, maxId: 251, label: '第2世代 (ジョウト)', sub: '金・銀・クリスタル', icon: 'fa-feather-pointed', color: 'amber' },
     3: { id: 3, name: '第3世代', region: 'ホウエン', minId: 252, maxId: 386, label: '第3世代 (ホウエン)', sub: 'ルビー・サファイア・エメラルド', icon: 'fa-gem', color: 'emerald' },
@@ -2708,6 +2869,8 @@ const GENERATION_CONFIG = {
     9: { id: 9, name: '第9世代', region: 'パルデア', minId: 906, maxId: 1025, label: '第9世代 (パルデア)', sub: 'スカーレット・バイオレット', icon: 'fa-crown', color: 'violet' }
 };
 
+let GENERATION_CONFIG = { ...BASE_GENERATION_CONFIG };
+
 const GEN_COLOR_THEMES = {
     red: { border: 'border-red-400', bg: 'bg-red-50/70', badgeBg: 'bg-red-100', badgeText: 'text-red-700', checkBg: 'bg-red-500', iconBg: 'bg-red-100 text-red-600', hoverText: 'group-hover:text-red-700' },
     amber: { border: 'border-amber-400', bg: 'bg-amber-50/70', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', checkBg: 'bg-amber-500', iconBg: 'bg-amber-100 text-amber-600', hoverText: 'group-hover:text-amber-700' },
@@ -2717,8 +2880,158 @@ const GEN_COLOR_THEMES = {
     blue: { border: 'border-blue-400', bg: 'bg-blue-50/70', badgeBg: 'bg-blue-100', badgeText: 'text-blue-700', checkBg: 'bg-blue-500', iconBg: 'bg-blue-100 text-blue-600', hoverText: 'group-hover:text-blue-700' },
     orange: { border: 'border-orange-400', bg: 'bg-orange-50/70', badgeBg: 'bg-orange-100', badgeText: 'text-orange-700', checkBg: 'bg-orange-500', iconBg: 'bg-orange-100 text-orange-600', hoverText: 'group-hover:text-orange-700' },
     indigo: { border: 'border-indigo-400', bg: 'bg-indigo-50/70', badgeBg: 'bg-indigo-100', badgeText: 'text-indigo-700', checkBg: 'bg-indigo-500', iconBg: 'bg-indigo-100 text-indigo-600', hoverText: 'group-hover:text-indigo-700' },
-    violet: { border: 'border-violet-400', bg: 'bg-violet-50/70', badgeBg: 'bg-violet-100', badgeText: 'text-violet-700', checkBg: 'bg-violet-500', iconBg: 'bg-violet-100 text-violet-600', hoverText: 'group-hover:text-violet-700' }
+    violet: { border: 'border-violet-400', bg: 'bg-violet-50/70', badgeBg: 'bg-violet-100', badgeText: 'text-violet-700', checkBg: 'bg-violet-500', iconBg: 'bg-violet-100 text-violet-600', hoverText: 'group-hover:text-violet-700' },
+    teal: { border: 'border-teal-400', bg: 'bg-teal-50/70', badgeBg: 'bg-teal-100', badgeText: 'text-teal-700', checkBg: 'bg-teal-500', iconBg: 'bg-teal-100 text-teal-600', hoverText: 'group-hover:text-teal-700' },
+    rose: { border: 'border-rose-400', bg: 'bg-rose-50/70', badgeBg: 'bg-rose-100', badgeText: 'text-rose-700', checkBg: 'bg-rose-500', iconBg: 'bg-rose-100 text-rose-600', hoverText: 'group-hover:text-rose-700' },
+    sky: { border: 'border-sky-400', bg: 'bg-sky-50/70', badgeBg: 'bg-sky-100', badgeText: 'text-sky-700', checkBg: 'bg-sky-500', iconBg: 'bg-sky-100 text-sky-600', hoverText: 'group-hover:text-sky-700' },
+    fuchsia: { border: 'border-fuchsia-400', bg: 'bg-fuchsia-50/70', badgeBg: 'bg-fuchsia-100', badgeText: 'text-fuchsia-700', checkBg: 'bg-fuchsia-500', iconBg: 'bg-fuchsia-100 text-fuchsia-600', hoverText: 'group-hover:text-fuchsia-700' }
 };
+
+const GEN_DYNAMIC_COLOR_CYCLE = ['teal', 'rose', 'sky', 'fuchsia', 'emerald', 'amber', 'indigo'];
+const GEN_DYNAMIC_ICON_CYCLE = ['fa-compass', 'fa-dragon', 'fa-bolt', 'fa-star', 'fa-earth-asia'];
+
+function capitalizeWord(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function saveDynamicGenerationMeta() {
+    const dynamicOnly = {};
+    Object.keys(GENERATION_CONFIG).forEach(key => {
+        const g = parseInt(key, 10);
+        if (!BASE_GENERATION_CONFIG[g]) {
+            dynamicOnly[g] = GENERATION_CONFIG[g];
+        }
+    });
+    saveJsonStorage(DYNAMIC_GEN_META_KEY, dynamicOnly);
+}
+
+function ensureGenerationRegistered(genNum, regionName = '', genData = null) {
+    const g = parseInt(genNum, 10);
+    if (!g || g < 1) return null;
+
+    if (BASE_GENERATION_CONFIG[g]) {
+        GENERATION_CONFIG[g] = { ...BASE_GENERATION_CONFIG[g] };
+        return GENERATION_CONFIG[g];
+    }
+
+    const idx = Math.max(0, g - 10);
+    const existing = GENERATION_CONFIG[g];
+    const resolvedRegion = regionName
+        || (genData?.main_region?.name ? capitalizeWord(genData.main_region.name) : '')
+        || (existing?.region && existing.region !== '新地方' ? existing.region : '新地方');
+    const name = `第${g}世代`;
+    const sub = resolvedRegion !== '新地方'
+        ? `${resolvedRegion}地方 / PokeAPI追加世代`
+        : 'PokeAPI自動追加世代';
+
+    GENERATION_CONFIG[g] = {
+        id: g,
+        name,
+        region: resolvedRegion,
+        label: `${name} (${resolvedRegion})`,
+        sub,
+        icon: existing?.icon || GEN_DYNAMIC_ICON_CYCLE[idx % GEN_DYNAMIC_ICON_CYCLE.length],
+        color: existing?.color || GEN_DYNAMIC_COLOR_CYCLE[idx % GEN_DYNAMIC_COLOR_CYCLE.length],
+        _synced: Boolean(genData) || Boolean(existing?._synced)
+    };
+    saveDynamicGenerationMeta();
+    return GENERATION_CONFIG[g];
+}
+
+function resetDynamicGenerationConfig() {
+    GENERATION_CONFIG = { ...BASE_GENERATION_CONFIG };
+}
+
+function initDynamicGenerationMeta() {
+    const apiMeta = loadApiMeta();
+    if (apiMeta.effectiveTargetCount && apiMeta.effectiveTargetCount > totalPokemonTarget) {
+        totalPokemonTarget = apiMeta.effectiveTargetCount;
+    }
+    if (apiMeta.speciesGenMap && typeof apiMeta.speciesGenMap === 'object') {
+        speciesGenMap = { ...apiMeta.speciesGenMap };
+    }
+    const savedDynamic = loadJsonStorage(DYNAMIC_GEN_META_KEY, {});
+    if (savedDynamic && typeof savedDynamic === 'object') {
+        Object.keys(savedDynamic).forEach(key => {
+            const g = parseInt(key, 10);
+            if (g > 0 && !BASE_GENERATION_CONFIG[g] && savedDynamic[key]) {
+                GENERATION_CONFIG[g] = savedDynamic[key];
+            }
+        });
+    }
+    quizSelectedGens = new Set(getAvailableGenerations());
+}
+
+async function syncGenerationsFromPokeApi(forceRefresh = false, preloadedGenList = null) {
+    try {
+        const genList = preloadedGenList || await fetchJsonWithTimeout('https://pokeapi.co/api/v2/generation', 7000);
+        const results = Array.isArray(genList?.results) ? genList.results : [];
+
+        for (const item of results) {
+            const genId = parsePokeApiId(item.url, 'generation');
+            if (!genId) continue;
+
+            const isBase = Boolean(BASE_GENERATION_CONFIG[genId]);
+            const existing = GENERATION_CONFIG[genId];
+            const needsFetch = !isBase && (forceRefresh || !existing || !existing._synced);
+
+            if (needsFetch) {
+                try {
+                    const genDetail = await fetchJsonWithTimeout(item.url, 7000);
+                    let regionName = '';
+                    if (genDetail?.main_region?.url) {
+                        try {
+                            const regionDetail = await fetchJsonWithTimeout(genDetail.main_region.url, 5000);
+                            regionName = extractJapaneseName(
+                                regionDetail?.names,
+                                capitalizeWord(regionDetail?.name || genDetail?.main_region?.name || '')
+                            );
+                        } catch (e) {
+                            regionName = capitalizeWord(genDetail?.main_region?.name || '');
+                        }
+                    }
+                    if (Array.isArray(genDetail?.pokemon_species)) {
+                        genDetail.pokemon_species.forEach(sp => {
+                            const spId = parsePokeApiId(sp.url, 'pokemon-species');
+                            if (spId > 0) speciesGenMap[spId] = genId;
+                        });
+                    }
+                    ensureGenerationRegistered(genId, regionName, genDetail);
+                } catch (e) {
+                    ensureGenerationRegistered(genId);
+                }
+            }
+        }
+        saveApiMeta({ speciesGenMap });
+        return genList;
+    } catch (e) {
+        return preloadedGenList || null;
+    }
+}
+
+function getAvailableGenerations() {
+    const genSet = new Set(Object.keys(BASE_GENERATION_CONFIG).map(Number));
+    if (Array.isArray(pokemonList) && pokemonList.length > 0) {
+        pokemonList.forEach(p => {
+            const g = getPokemonGeneration(p);
+            if (g > 0) {
+                genSet.add(g);
+                if (!GENERATION_CONFIG[g]) ensureGenerationRegistered(g);
+            }
+        });
+    }
+    return Array.from(genSet).sort((a, b) => a - b);
+}
+
+function syncSelectionWithNewGenerations(prevAvailableSet) {
+    const currentGens = getAvailableGenerations();
+    const hadAllPrev = prevAvailableSet && prevAvailableSet.size > 0 &&
+        Array.from(prevAvailableSet).every(g => quizSelectedGens.has(g));
+    if (hadAllPrev) {
+        currentGens.forEach(g => quizSelectedGens.add(g));
+    }
+}
 
 // ポケモンの世代を初登場世代基準で判定
 function getPokemonGeneration(p) {
@@ -2746,8 +3059,12 @@ function getPokemonGeneration(p) {
     if (raw.includes('rotom-') || raw.includes('giratina-') || raw.includes('shaymin-')) return 4;
     if (raw.includes('deoxys-')) return 3;
 
-    // 4. 通常種（全国図鑑番号 baseId または id による世代判定）
+    // 4. PokeAPI から取得済みの世代番号 / 種族世代マップを優先使用（第10世代以降に自動対応）
     const natId = p.baseId || p.id;
+    if (p.gen && Number.isFinite(p.gen) && p.gen >= 1) return p.gen;
+    if (natId && speciesGenMap[natId]) return speciesGenMap[natId];
+
+    // 5. 通常種（全国図鑑番号 baseId または id によるフォールバック世代判定）
     if (natId <= 151) return 1;
     if (natId <= 251) return 2;
     if (natId <= 386) return 3;
@@ -2758,7 +3075,8 @@ function getPokemonGeneration(p) {
     if (natId <= 905) return 8;
     if (natId <= 1025) return 9;
 
-    return 9;
+    const knownGens = Object.keys(GENERATION_CONFIG).map(Number).filter(n => n > 0);
+    return knownGens.length > 0 ? Math.max(...knownGens) : 9;
 }
 
 // 絞り込み条件に応じた出題候補ポケモンの取得
@@ -2776,10 +3094,11 @@ function getFilteredCandidates(difficulty, genSet) {
 
 // クイズバッジの表示テキスト生成
 function getQuizBadgeText(difficulty, genSet) {
+    const allGens = getAvailableGenerations();
     let genText = '';
     if (!genSet || genSet.size === 0) {
         genText = '未選択';
-    } else if (genSet.size === 9) {
+    } else if (allGens.length > 0 && allGens.every(g => genSet.has(g))) {
         genText = '全世代';
     } else if (genSet.size === 1) {
         const g = Array.from(genSet)[0];
@@ -2798,9 +3117,10 @@ function renderQuizGenCards() {
     const container = document.getElementById('quiz-gen-cards-container');
     if (!container) return;
 
+    const allGens = getAvailableGenerations();
     let html = '';
-    for (let gen = 1; gen <= 9; gen++) {
-        const info = GENERATION_CONFIG[gen];
+    for (const gen of allGens) {
+        const info = GENERATION_CONFIG[gen] || ensureGenerationRegistered(gen);
         if (!info) continue;
         const isSelected = quizSelectedGens.has(gen);
         const theme = GEN_COLOR_THEMES[info.color] || GEN_COLOR_THEMES.red;
@@ -2857,6 +3177,13 @@ function updateQuizRangeSummary() {
     const startBtnLabel = document.getElementById('quiz-main-start-btn-label');
     const warningEl = document.getElementById('quiz-gen-none-warning');
 
+    const allGens = getAvailableGenerations();
+    const maxGen = allGens.length > 0 ? allGens[allGens.length - 1] : 9;
+    const latePresetBtn = document.getElementById('quiz-gen-preset-late');
+    if (latePresetBtn) {
+        latePresetBtn.textContent = maxGen >= 7 ? `7〜${maxGen}世代` : '7世代〜';
+    }
+
     const candidates = getFilteredCandidates(quizSelectedDifficulty, quizSelectedGens);
     const count = candidates.length;
 
@@ -2867,8 +3194,8 @@ function updateQuizRangeSummary() {
     let genText = '';
     if (!quizSelectedGens || quizSelectedGens.size === 0) {
         genText = '未選択';
-    } else if (quizSelectedGens.size === 9) {
-        genText = '全世代 (第1〜9世代)';
+    } else if (allGens.length > 0 && allGens.every(g => quizSelectedGens.has(g))) {
+        genText = `全世代 (第1〜${maxGen}世代)`;
     } else if (quizSelectedGens.size === 1) {
         const g = Array.from(quizSelectedGens)[0];
         const info = GENERATION_CONFIG[g];
@@ -2917,7 +3244,8 @@ function startConfiguredQuiz() {
         return;
     }
 
-    quizCurrentMode = (quizSelectedGens.size === 9)
+    const allGens = getAvailableGenerations();
+    quizCurrentMode = (allGens.length > 0 && allGens.every(g => quizSelectedGens.has(g)))
         ? quizSelectedDifficulty
         : (quizSelectedGens.size === 1
             ? `gen-${Array.from(quizSelectedGens)[0]}-${quizSelectedDifficulty}`
@@ -2969,10 +3297,10 @@ function startConfiguredQuiz() {
 function startQuiz(mode) {
     if (mode === 'normal') {
         quizSelectedDifficulty = 'normal';
-        quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        quizSelectedGens = new Set(getAvailableGenerations());
     } else if (mode === 'hard') {
         quizSelectedDifficulty = 'hard';
-        quizSelectedGens = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        quizSelectedGens = new Set(getAvailableGenerations());
     } else if (typeof mode === 'string' && mode.startsWith('gen-')) {
         const parts = mode.split('-');
         const genNum = parseInt(parts[1], 10);
@@ -3938,8 +4266,9 @@ let _latestQuizShareCaption = '';
 let _quizShareCopyTimer = null;
 
 function getQuizShareModeLabel(difficulty, genSet) {
+    const allGens = getAvailableGenerations();
     let genLabel = '全世代';
-    if (genSet && genSet.size > 0 && genSet.size < 9) {
+    if (genSet && genSet.size > 0 && !(allGens.length > 0 && allGens.every(g => genSet.has(g)))) {
         if (genSet.size === 1) {
             const g = Array.from(genSet)[0];
             const info = GENERATION_CONFIG[g];
